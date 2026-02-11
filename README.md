@@ -1,5 +1,5 @@
 <div align="center">
-![GHBanner](https://i.ibb.co/r2RLcx6T/logo-checkmark-final.png )
+<img alt="GHBanner" src="https://i.ibb.co/r2RLcx6T/logo-checkmark-final.png" />
 </div>
 
 # Run and deploy your AI Studio app
