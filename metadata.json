@@ -1,6 +1,6 @@
 {
-  "name": "Life Physics",
-  "description": "Understand the science of your habits and emotions using simple laws of motion and energy.",
+  "name": "Life Physics Architect",
+  "description": "Master your daily flow with the world's first physics-based strategic checklist.",
   "requestFramePermissions": [
     "camera",
     "microphone"

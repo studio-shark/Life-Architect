@@ -1,28 +1,124 @@
-
 {
   "id": "io.lifephysics.architect",
   "name": "Life Physics Architect",
   "short_name": "LifePhysics",
-  "description": "Master your daily flow with the world's first physics-based checklist. Life Physics Architect transforms your habits into energy vectors, helping you visualize progress through the laws of motion. Features AI-powered strategic insights, real-time cloud sync, and dedicated Android home screen widgets to keep your growth trajectory on track.",
-  "start_url": "/",
-  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "description": "Master your daily flow with the world's first physics-based strategic checklist. Life Physics Architect transforms your habits into energy vectors, helping you visualize progress through the laws of motion.",
+  "start_url": "./index.html?launcher=true",
+  "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "background_color": "#0a0a0c",
   "theme_color": "#10b981",
-  "categories": ["productivity", "health", "lifestyle"],
   "orientation": "portrait",
+  "categories": [
+    "productivity",
+    "health",
+    "lifestyle"
+  ],
+  "iarc_rating_id": "e84ca5a4-073d-4c5b-82b6-0ad901460355",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "handle_links": "preferred",
+  "share_target": {
+    "action": "./index.html?shared=true",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+quest",
+      "url": "./index.html?quest=%s"
+    }
+  ],
   "icons": [
     {
-      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=LifePhysics&backgroundColor=10b981",
+      "src": "https://placehold.co/192x192/10b981/ffffff/png?text=LP",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=LifePhysics&backgroundColor=10b981",
+      "src": "https://placehold.co/192x192/10b981/ffffff/png?text=LP",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512/10b981/ffffff/png?text=LP",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://placehold.co/512x512/10b981/ffffff/png?text=LP",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "https://placehold.co/1080x1920/0a0a0c/10b981/png?text=Quest+Log",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Quest Log Mobile"
+    },
+    {
+      "src": "https://placehold.co/1080x1920/0a0a0c/10b981/png?text=Growth+Path",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Growth Path Mobile"
+    },
+    {
+      "src": "https://placehold.co/1920x1080/0a0a0c/10b981/png?text=System+Dashboard",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Architect Desktop Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Quest",
+      "short_name": "New",
+      "description": "Quickly add a new energy vector",
+      "url": "./index.html?action=new",
+      "icons": [{ "src": "https://placehold.co/192x192/10b981/ffffff/png?text=+", "sizes": "192x192" }]
+    },
+    {
+      "name": "Quest Log",
+      "short_name": "Quests",
+      "description": "View your active daily flow",
+      "url": "./index.html?tab=flow",
+      "icons": [{ "src": "https://placehold.co/192x192/10b981/ffffff/png?text=Q", "sizes": "192x192" }]
+    },
+    {
+      "name": "Strategic Guidance",
+      "short_name": "Guide",
+      "description": "Review your strategic guidance",
+      "url": "./index.html?tab=guide",
+      "icons": [{ "src": "https://placehold.co/192x192/10b981/ffffff/png?text=G", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=io.lifephysics.architect",
+      "id": "io.lifephysics.architect"
+    }
+  ],
+  "prefer_related_applications": false
 }

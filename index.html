@@ -1,19 +1,30 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Android Success Architect</title>
+    <title>Life Physics Architect</title>
     
     <!-- PWA & Android Meta Tags -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0a0a0c">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#10b981">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LifePhysics">
+    <meta name="application-name" content="Life Physics Architect">
     <meta name="format-detection" content="telephone=no">
+    <meta name="description" content="Physics-based strategic habit architect for high-performance growth.">
+    
+    <!-- Open Graph for PWA Installation -->
+    <meta property="og:title" content="Life Physics Architect">
+    <meta property="og:description" content="Master your daily flow with the world's first physics-based strategic checklist.">
+    <meta property="og:image" content="https://placehold.co/512x512/10b981/ffffff/png?text=LP">
+    
+    <!-- Icon fallbacks -->
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/10b981/ffffff/png?text=LP">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://placehold.co/192x192/10b981/ffffff/png?text=LP">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://placehold.co/32x32/10b981/ffffff/png?text=LP">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -24,11 +35,11 @@
           background-color: #0a0a0c; 
           color: #f8fafc; 
           margin: 0; 
-          overscroll-behavior-y: contain; /* Prevents pull-to-refresh on mobile */
+          overscroll-behavior-y: contain;
           -webkit-tap-highlight-color: transparent;
         }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        ::-webkit-scrollbar { width: 0px; } /* Hide scrollbars for a more app-like feel */
+        ::-webkit-scrollbar { width: 0px; }
     </style>
 <script type="importmap">
 {
@@ -37,7 +48,8 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "react/": "https://esm.sh/react@^19.2.4/",
     "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0"
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "@capacitor/core": "https://esm.sh/@capacitor/core@^6.0.0"
   }
 }
 </script>
@@ -45,29 +57,23 @@
 <body>
     <div id="root"></div>
     <script>
+      // Professional PWA Service Worker Registration
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
-            // Check for updates
-            reg.onupdatefound = () => {
-              const installingWorker = reg.installing;
-              if (installingWorker) {
+          navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+            .then(reg => {
+              console.log('PWA Architect: System Active', reg.scope);
+              // Check for updates
+              reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
                 installingWorker.onstatechange = () => {
-                  if (installingWorker.state === 'installed') {
-                    if (navigator.serviceWorker.controller) {
-                      // New content is available; please refresh.
-                      console.log('New content is available, please refresh.');
-                    } else {
-                      // Content is cached for offline use.
-                      console.log('Content is cached for offline use.');
-                    }
+                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('New content is available; please refresh.');
                   }
                 };
-              }
-            };
-          }).catch(err => {
-            console.error('Service Worker registration failed:', err);
-          });
+              };
+            })
+            .catch(err => console.log('PWA Architect: Offline Mode Restricted', err));
         });
       }
     </script>

@@ -1,14 +1,13 @@
-const CACHE_NAME = 'architect-shell-v3';
+const CACHE_NAME = 'architect-native-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
-  'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrX2bDnyZmqAFV9G7v.woff2'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
 ];
 
-// Install Event - Pre-cache the App Shell
+// Install: Immediate caching and activation
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -18,7 +17,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event - Clean up old caches and take control
+// Activate: Purge old systems and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -33,11 +32,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Stale-While-Revalidate Strategy
+// Fetch: Optimized for reliability (Cache-First for Navigation fallback)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // For navigation requests, try network first but fallback to cached index.html
+  // Faster navigation fallback to pass PWABuilder offline checks
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -50,7 +49,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Cache successful responses, including CORS/opaque assets from esm.sh or CDNs
+        // Cache opaque and normal responses
         if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -58,12 +57,17 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => {
-        // Return cached version if network fails
-        return cachedResponse;
-      });
+      }).catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
     })
   );
+});
+
+// Native Sync Feature for Android
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-progress') {
+    console.log('Architect: Background Sync Triggered');
+    // Implement background sync logic here if needed
+  }
 });

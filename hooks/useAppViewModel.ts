@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Task, AppTab, Project, User, AuthUser, Prerequisite } from '../types.ts';
 import { 
@@ -41,6 +40,23 @@ export const useAppViewModel = () => {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
+  // Android Native Integration: Haptics & Badging
+  const triggerHaptic = (pattern: number | number[] = 50) => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(pattern);
+    }
+  };
+
+  const updateAppBadge = useCallback((count: number) => {
+    if ('setAppBadge' in navigator) {
+      if (count > 0) {
+        (navigator as any).setAppBadge(count).catch(() => {});
+      } else {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -75,6 +91,10 @@ export const useAppViewModel = () => {
       const stateToSave = { tasks, projects, users, xp, level, authUser };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
 
+      // Update badge whenever tasks change
+      const pendingCount = tasks.filter(t => t.status === 'pending').length;
+      updateAppBadge(pendingCount);
+
       if (authUser && syncStatus !== 'syncing') {
         setSyncStatus('syncing');
         CloudService.pushProgress(authUser.id, authUser.token, stateToSave)
@@ -82,7 +102,7 @@ export const useAppViewModel = () => {
           .catch(() => setSyncStatus('error'));
       }
     }
-  }, [tasks, projects, users, xp, level, authUser, syncStatus]);
+  }, [tasks, projects, users, xp, level, authUser, syncStatus, updateAppBadge]);
 
   const handleGoogleSignIn = useCallback((response: any) => {
     try {
@@ -135,6 +155,7 @@ export const useAppViewModel = () => {
         currentLevel++;
         setLevel(currentLevel);
         needed = getXPNeededForLevel(currentLevel);
+        triggerHaptic([100, 50, 100]); // Level up pulse
       }
       return Math.max(0, nextXp); 
     });
@@ -153,9 +174,11 @@ export const useAppViewModel = () => {
         const gain = isCritical ? Math.floor(baseXP * 2.5) : baseXP;
         result = { xp: gain, critical: isCritical };
         addXp(gain);
+        triggerHaptic(isCritical ? [50, 30, 50] : 50);
       } else {
         result = { xp: -baseXP, critical: false };
         addXp(-baseXP);
+        triggerHaptic(10); // Light haptic for undo
       }
 
       return prev.map(t => t.id === id ? { ...t, status: isCompleting ? 'completed' : 'pending' } : t);
@@ -178,9 +201,11 @@ export const useAppViewModel = () => {
               const gain = isCritical ? PREREQ_XP * 4 : PREREQ_XP;
               result = { xp: gain, critical: isCritical };
               addXp(gain);
+              triggerHaptic(30);
             } else {
               result = { xp: -PREREQ_XP, critical: false };
               addXp(-PREREQ_XP);
+              triggerHaptic(10);
             }
             return { ...p, completed: isCompleting };
           }
@@ -195,6 +220,7 @@ export const useAppViewModel = () => {
   }, [addXp]);
 
   const addPrerequisite = useCallback((taskId: string) => {
+    triggerHaptic(20);
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         const newP: Prerequisite = { id: Math.random().toString(), label: '', completed: false };
@@ -218,13 +244,26 @@ export const useAppViewModel = () => {
   }, []);
 
   const addCalendarReminder = useCallback((title: string, description: string = '') => {
-    const baseUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isAndroid = /android/i.test(userAgent);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+    
     const params = new URLSearchParams({
       text: `Quest: ${title}`,
       details: `${description}\n\nSynced via Life Physics.`,
       location: 'Life Physics Dashboard',
     });
-    window.open(`${baseUrl}&${params.toString()}`, '_blank');
+
+    if (isAndroid) {
+      const url = `intent://calendar.google.com/calendar/render?action=TEMPLATE&${params.toString()}#Intent;scheme=https;package=com.google.android.calendar;end`;
+      window.location.href = url;
+    } else if (isMobile) {
+      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&${params.toString()}`;
+      window.location.href = url;
+    } else {
+      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&${params.toString()}`;
+      window.open(url, '_blank');
+    }
   }, []);
 
   const fetchTaskAI = useCallback(async (taskId: string, taskTitle: string) => {
@@ -237,7 +276,6 @@ export const useAppViewModel = () => {
       const result = await generateSmartTaskBreakdown(taskTitle, labels, targetTask.selectedSkill);
       setAiContentMap(prev => ({ ...prev, [taskId]: result }));
     } catch (err) {
-      // Production fail silently
     } finally {
       setLoadingTasks(prev => ({ ...prev, [taskId]: false }));
     }
@@ -251,7 +289,6 @@ export const useAppViewModel = () => {
       const advice = await getArchitectureAdvice(phase);
       setArchAdvice(advice);
     } catch (err) {
-      // Production fail silently
     } finally {
       setIsArchLoading(false);
     }

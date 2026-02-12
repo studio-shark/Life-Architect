@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { AppTab } from './types.ts';
 import { ICONS } from './constants.tsx';
@@ -8,6 +7,7 @@ import AnalyticsPanel from './components/AnalyticsPanel.tsx';
 import WidgetSystem from './components/WidgetSystem.tsx';
 import Header from './components/Header.tsx';
 import { useAppViewModel } from './hooks/useAppViewModel.ts';
+import { useWidgetSync } from './hooks/useWidgetSync.ts';
 
 const App: React.FC = () => {
   const { state, actions } = useAppViewModel();
@@ -39,6 +39,9 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Sync widgets with native Android
+  useWidgetSync(level, xp, xpToNextLevel, tasks);
 
   const handleGuestSignIn = () => {
     actions.handleGoogleSignIn({

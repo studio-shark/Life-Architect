@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Task, Project } from '../types.ts';
 import { COMMON_SKILLS } from '../constants.tsx';
@@ -44,13 +43,11 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const prevPrereqCount = useRef(task.prerequisites?.length || 0);
   
-  // Auto-focus logic for new tasks when the count increases
   useEffect(() => {
     const currentCount = task.prerequisites?.length || 0;
     if (currentCount > prevPrereqCount.current) {
       const active = task.prerequisites?.filter(p => !p.completed) || [];
       if (active.length > 0) {
-        // Focus the last added active task
         const lastTask = active[active.length - 1];
         setTimeout(() => {
           inputRefs.current[lastTask.id]?.focus();
@@ -71,7 +68,7 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (task.prerequisites && task.prerequisites.length > 0) {
+    if (task.prerequisites && task.prerequisites.length > 0 && task.status !== 'completed') {
       setIsExpanded(!isExpanded);
       return;
     }
@@ -87,6 +84,17 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
     const res = onTogglePrereq?.(pid) as any;
     if (res && res.xp !== 0) {
       spawnPopup(res.xp, res.critical, 'prereq', pid);
+    }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator.share) {
+      navigator.share({
+        title: `Life Physics: ${task.title}`,
+        text: `I'm working on "${task.title}" in Life Physics Architect. Join the flow!`,
+        url: window.location.href,
+      }).catch(() => {});
     }
   };
 
@@ -112,7 +120,6 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
   };
 
   const activePrereqs = task.prerequisites?.filter(p => !p.completed) || [];
-  // Most recently finished at the top: reverse the array of completed items
   const completedPrereqs = [...(task.prerequisites?.filter(p => p.completed) || [])].reverse();
 
   return (
@@ -123,7 +130,6 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
           onClick={handleToggle}
           className={`relative flex-shrink-0 w-14 h-14 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 ${task.status === 'completed' ? 'bg-emerald-600 border-emerald-600 scale-90 rotate-[360deg]' : 'border-slate-700 bg-black group-hover:border-emerald-500 shadow-xl shadow-black/40'}`}
         >
-          {/* Main Task Popups */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible z-50">
             {popups.filter(p => p.type === 'task').map(p => (
               <div 
@@ -157,12 +163,26 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
           <p className="text-sm text-slate-500 font-bold leading-relaxed">{task.description}</p>
         </div>
 
-        <button 
-          onClick={(e) => { e.stopPropagation(); onFetchAI(); }}
-          className={`p-4 rounded-2xl border transition-all flex items-center gap-3 text-[10px] font-black uppercase tracking-widest ${isLoadingAI ? 'bg-slate-900 border-slate-800 text-slate-700' : aiContent ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' : 'bg-emerald-600/10 text-emerald-400 border-emerald-600/20 hover:bg-emerald-600 hover:text-white'}`}
-        >
-          {isLoadingAI ? <div className="w-5 h-5 border-2 border-slate-700 border-t-emerald-500 animate-spin rounded-full"></div> : <span>Insight</span>}
-        </button>
+        <div className="flex flex-col gap-2">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onFetchAI(); }}
+            className={`p-4 rounded-2xl border transition-all flex items-center gap-3 text-[10px] font-black uppercase tracking-widest ${isLoadingAI ? 'bg-slate-900 border-slate-800 text-slate-700' : aiContent ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' : 'bg-emerald-600/10 text-emerald-400 border-emerald-600/20 hover:bg-emerald-600 hover:text-white'}`}
+          >
+            {isLoadingAI ? <div className="w-5 h-5 border-2 border-slate-700 border-t-emerald-500 animate-spin rounded-full"></div> : <span>Insight</span>}
+          </button>
+          
+          {navigator.share && (
+            <button 
+              onClick={handleShare}
+              className="p-3 rounded-2xl border border-slate-800 bg-slate-900/50 text-slate-500 hover:text-white hover:border-slate-600 transition-all flex items-center justify-center"
+              title="Share Quest"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6a3 3 0 100-2.684m0 2.684l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {isExpanded && (
@@ -176,7 +196,6 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                   onClick={(e) => handlePrereqToggle(e, p.id)}
                   className={`relative flex-shrink-0 w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all ${p.label.trim() === '' ? 'border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-30' : 'cursor-pointer border-slate-700 bg-black group-hover/item:border-emerald-500/50'}`}
                 >
-                  {/* Active Prereq Popups (for completion) */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible z-50">
                     {popups.filter(pop => pop.type === 'prereq' && pop.prereqId === p.id).map(pop => (
                       <div 
@@ -261,7 +280,6 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                       className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-900/20"
                       title="Restore Task"
                     >
-                      {/* Restoration Popups rendered here while item is in completed state */}
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible z-50">
                         {popups.filter(pop => pop.type === 'prereq' && pop.prereqId === p.id).map(pop => (
                           <div 
