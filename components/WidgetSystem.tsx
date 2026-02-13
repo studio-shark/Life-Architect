@@ -1,5 +1,7 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Task } from '../types.ts';
+import WidgetPin from '../plugins/widget-pin.ts';
 
 interface WidgetSystemProps {
   level: number;
@@ -13,6 +15,49 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
   const pendingTasks = tasks.filter(t => t.status === 'pending').slice(0, 3);
   const progressPercent = Math.min(100, (xp / xpToNextLevel) * 100);
 
+  const [canPinWidgets, setCanPinWidgets] = useState(false);
+  const [pinningWidget, setPinningWidget] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinSuccess, setPinSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    WidgetPin.canPinWidgets()
+      .then(result => setCanPinWidgets(result.canPin))
+      .catch(() => setCanPinWidgets(false));
+  }, []);
+
+  const handlePinWidget = async (widgetType: 'status' | 'tasks' | 'quickAdd', widgetName: string) => {
+    setPinError(null);
+    setPinSuccess(null);
+    setPinningWidget(widgetType);
+
+    try {
+      await WidgetPin.pinWidget({ widgetType, widgetName });
+      setPinSuccess(`${widgetName} widget ready to place!`);
+      setTimeout(() => setPinSuccess(null), 5000);
+    } catch (error: any) {
+      console.error('Failed to pin widget:', error);
+      if (error.message?.includes('Android version') || error.message?.includes('Launcher')) {
+        setPinError(error.message);
+      } else {
+        setPinError('Something went wrong. Try again.');
+      }
+      setTimeout(() => setPinError(null), 5000);
+    } finally {
+      setPinningWidget(null);
+    }
+  };
+
+  const showManualInstructions = () => {
+    alert(
+      'To add widgets manually:\n\n' +
+      '1. Long-press your home screen\n' +
+      '2. Tap "Widgets"\n' +
+      '3. Find "Life Physics Architect"\n' +
+      '4. Drag the widget to your home screen'
+    );
+  };
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <div className="mb-10">
@@ -20,11 +65,20 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Live Preview of your Home Screen Widgets & Shortcuts</p>
       </div>
 
+      {/* Global Status Messages */}
+      {(pinSuccess || pinError) && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-4 rounded-2xl border font-black uppercase text-xs tracking-widest shadow-2xl animate-in slide-in-from-bottom-10 duration-300 ${pinSuccess ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-rose-600 border-rose-400 text-white'}`}>
+          {pinSuccess || pinError}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         
-        {/* Widget 1: Status Glance (Material You Rounded Box) */}
+        {/* Widget 1: Status Glance */}
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4">Glance Progress (2x2)</p>
+          <div className="flex items-center justify-between px-4">
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Glance Progress (2x2)</p>
+          </div>
           <div className="bg-[#1f2128] rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all">
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -38,7 +92,7 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
               </div>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 mb-6">
               <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
                 <span>Memory Flow</span>
                 <span>{Math.round(progressPercent)}%</span>
@@ -50,28 +104,53 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
                 ></div>
               </div>
             </div>
+
+            <button 
+              onClick={() => canPinWidgets ? handlePinWidget('status', 'Glance Progress') : showManualInstructions()}
+              disabled={pinningWidget === 'status'}
+              className="w-full py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-emerald-500 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {pinningWidget === 'status' ? 'Adding to System...' : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  {canPinWidgets ? 'Add to Home Screen' : 'View Instructions'}
+                </>
+              )}
+            </button>
             
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl pointer-events-none"></div>
           </div>
         </div>
 
-        {/* Widget 2: List Glance (Task Hub) */}
+        {/* Widget 2: List Glance */}
         <div className="space-y-4">
           <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4">Active Quests (4x2)</p>
           <div className="bg-[#1a1c22] rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl space-y-5">
             <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Pending Streams</h4>
-            <div className="space-y-3">
+            <div className="space-y-3 mb-6">
               {pendingTasks.map(task => (
                 <div key={task.id} className="flex items-center gap-4 bg-black/30 p-4 rounded-2xl border border-slate-800/50 group hover:border-blue-500/30 transition-all">
                   <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
                   <span className="flex-1 text-xs font-bold text-slate-300 uppercase truncate">{task.title}</span>
-                  <div className="text-[8px] font-black text-slate-600 uppercase border border-slate-800 px-2 py-1 rounded-md">{task.difficulty}</div>
                 </div>
               ))}
               {pendingTasks.length === 0 && (
                 <div className="text-center py-6 text-slate-600 font-bold text-[10px] uppercase tracking-widest">System Aligned</div>
               )}
             </div>
+
+            <button 
+              onClick={() => canPinWidgets ? handlePinWidget('tasks', 'Active Quests') : showManualInstructions()}
+              disabled={pinningWidget === 'tasks'}
+              className="w-full py-4 rounded-2xl bg-slate-800 text-slate-300 font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {pinningWidget === 'tasks' ? 'Adding to System...' : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  {canPinWidgets ? 'Pin to Home' : 'Manual Install'}
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -80,16 +159,21 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
           <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4">Android Launcher Shortcuts (Long-Press)</p>
           <div className="bg-[#14161a] rounded-[2.5rem] p-6 border border-slate-800/50 flex flex-col md:flex-row gap-4">
              {[
-               { icon: '+', label: 'New Quest', desc: 'Jump to start' },
-               { icon: 'Q', label: 'Quest Log', desc: 'Current flow' },
-               { icon: 'G', label: 'Strategic Guidance', desc: 'AI Growth' }
+               { icon: '+', label: 'New Quest', type: 'quickAdd' as const },
+               { icon: 'Q', label: 'Quest Log', type: 'status' as const }
              ].map((s, i) => (
-               <div key={i} className="flex-1 bg-black/40 p-5 rounded-2xl border border-slate-800 flex items-center gap-4 hover:border-emerald-500/30 transition-all group">
-                 <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center font-black text-white">{s.icon}</div>
-                 <div className="text-left">
-                   <p className="text-[10px] font-black text-white uppercase tracking-tight">{s.label}</p>
-                   <p className="text-[8px] font-bold text-slate-600 uppercase">{s.desc}</p>
+               <div key={i} className="flex-1 bg-black/40 p-5 rounded-2xl border border-slate-800 flex items-center justify-between hover:border-emerald-500/30 transition-all group">
+                 <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center font-black text-white">{s.icon}</div>
+                    <p className="text-[10px] font-black text-white uppercase tracking-tight">{s.label}</p>
                  </div>
+                 <button 
+                   onClick={() => canPinWidgets ? handlePinWidget(s.type as any, s.label) : showManualInstructions()}
+                   className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
+                   title="Pin Shortcut"
+                 >
+                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                 </button>
                </div>
              ))}
           </div>

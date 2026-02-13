@@ -1,26 +1,25 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Task, Project } from '../types.ts';
-import { COMMON_SKILLS } from '../constants.tsx';
 
 interface ChecklistItemProps {
   task: Task;
   project?: Project;
   commentCount: number;
   reminderCount: number;
-  onToggle: () => { xp: number, critical: boolean } | void;
-  onTogglePrereq?: (prereqId: string) => { xp: number, critical: boolean } | void;
+  completedCount: number; // New prop to track global progression
+  onToggle: () => { xp: number, coins: number, critical: boolean } | void;
+  onTogglePrereq?: (prereqId: string) => { xp: number, coins: number, critical: boolean } | void;
   onUpdatePrereqLabel?: (taskId: string, pid: string, label: string) => void;
   onAddPrereq?: (taskId: string) => void;
   onSelectSkill?: (taskId: string, skill: string) => void;
   onAddCalendar?: (title: string, desc: string) => void;
-  aiContent?: any;
-  isLoadingAI: boolean;
-  onFetchAI: () => void;
 }
 
 interface XpPopup {
   id: number;
-  amount: number;
+  xpAmount: number;
+  coinAmount: number;
   critical: boolean;
   type: 'task' | 'prereq';
   prereqId?: string;
@@ -28,15 +27,12 @@ interface XpPopup {
 
 const ChecklistItem: React.FC<ChecklistItemProps> = ({ 
   task, 
+  completedCount,
   onToggle,
   onTogglePrereq,
   onUpdatePrereqLabel,
   onAddPrereq,
-  onSelectSkill,
-  onAddCalendar,
-  aiContent, 
-  isLoadingAI, 
-  onFetchAI
+  onAddCalendar
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [popups, setPopups] = useState<XpPopup[]>([]);
@@ -57,10 +53,10 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
     prevPrereqCount.current = currentCount;
   }, [task.prerequisites?.length]);
 
-  const spawnPopup = (amount: number, critical: boolean, type: 'task' | 'prereq', prereqId?: string) => {
-    if (amount === 0) return;
+  const spawnPopup = (xpAmount: number, coinAmount: number, critical: boolean, type: 'task' | 'prereq', prereqId?: string) => {
+    if (xpAmount === 0 && coinAmount === 0) return;
     const id = Date.now() + Math.random();
-    setPopups(prev => [...prev, { id, amount, critical, type, prereqId }]);
+    setPopups(prev => [...prev, { id, xpAmount, coinAmount, critical, type, prereqId }]);
     setTimeout(() => {
       setPopups(prev => prev.filter(p => p.id !== id));
     }, 3000); 
@@ -73,7 +69,7 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
       return;
     }
     const res = onToggle() as any;
-    if (res && res.xp !== 0) spawnPopup(res.xp, res.critical, 'task');
+    if (res && (res.xp !== 0 || res.coins !== 0)) spawnPopup(res.xp, res.coins, res.critical, 'task');
   };
 
   const handlePrereqToggle = (e: React.MouseEvent, pid: string) => {
@@ -82,19 +78,8 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
     if (!prereq || prereq.label.trim() === '') return;
 
     const res = onTogglePrereq?.(pid) as any;
-    if (res && res.xp !== 0) {
-      spawnPopup(res.xp, res.critical, 'prereq', pid);
-    }
-  };
-
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (navigator.share) {
-      navigator.share({
-        title: `Life Physics: ${task.title}`,
-        text: `I'm working on "${task.title}" in Life Physics Architect. Join the flow!`,
-        url: window.location.href,
-      }).catch(() => {});
+    if (res && (res.xp !== 0 || res.coins !== 0)) {
+      spawnPopup(res.xp, res.coins, res.critical, 'prereq', pid);
     }
   };
 
@@ -110,10 +95,29 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
     onAddCalendar?.(label, task.description);
   };
 
-  const getDifficultyColor = (diff: string) => {
-    switch(diff) {
+  /**
+   * Dynamically determines the difficulty label based on global completed tasks.
+   * Only affects 'Some Weight' difficulty as requested.
+   */
+  const getDisplayedDifficulty = () => {
+    if (task.difficulty !== 'Some Weight') return task.difficulty;
+    
+    if (completedCount >= 1 && completedCount <= 4) return "1-4 Finished Tasks";
+    if (completedCount >= 5 && completedCount <= 9) return "5-9 Finished Tasks";
+    if (completedCount >= 10 && completedCount <= 14) return "10-14 Finished Tasks";
+    if (completedCount > 14) return "14+ Finished Tasks";
+    
+    return "Some Weight"; // Baseline
+  };
+
+  const getDifficultyColor = (diffValue: string) => {
+    switch(task.difficulty) {
       case 'Easy Start': return 'bg-emerald-900/20 text-emerald-400 border-emerald-900/30';
-      case 'Some Weight': return 'bg-orange-900/20 text-orange-400 border-orange-900/30';
+      case 'Some Weight': 
+        if (completedCount > 14) return 'bg-orange-600 text-white border-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)]';
+        if (completedCount >= 10) return 'bg-orange-700/40 text-orange-200 border-orange-500/50';
+        if (completedCount >= 5) return 'bg-orange-800/30 text-orange-300 border-orange-600/40';
+        return 'bg-orange-900/20 text-orange-400 border-orange-900/30';
       case 'Heavy Weight': return 'bg-red-900/20 text-red-400 border-red-900/30';
       default: return 'bg-slate-800 text-slate-500 border-slate-700';
     }
@@ -123,7 +127,7 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
   const completedPrereqs = [...(task.prerequisites?.filter(p => p.completed) || [])].reverse();
 
   return (
-    <div className={`group bg-[#1a1a1e] rounded-[2rem] border transition-all duration-500 overflow-visible relative ${task.status === 'completed' ? 'border-emerald-900/30 bg-emerald-900/5 opacity-80' : 'border-slate-800 hover:border-emerald-500/30 shadow-2xl shadow-black/20'}`}>
+    <div className={`group bg-[#111214] rounded-[2rem] border transition-all duration-500 overflow-visible relative ${task.status === 'completed' ? 'border-emerald-900/30 bg-emerald-900/5 opacity-80' : 'border-slate-800 hover:border-emerald-500/30 shadow-2xl shadow-black/20'}`}>
       
       <div className="p-7 flex items-start gap-6 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
         <div 
@@ -134,9 +138,14 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
             {popups.filter(p => p.type === 'task').map(p => (
               <div 
                 key={p.id} 
-                className={`absolute font-black animate-float-up pointer-events-none whitespace-nowrap ${p.amount > 0 ? (p.critical ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]') : 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]'} ${p.critical ? 'text-5xl' : 'text-3xl'}`}
+                className={`absolute font-black animate-float-up pointer-events-none whitespace-nowrap flex flex-col items-center gap-1 ${p.xpAmount > 0 ? (p.critical ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]') : 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]'} ${p.critical ? 'text-5xl' : 'text-3xl'}`}
               >
-                {p.amount > 0 ? `+${p.amount}` : p.amount} XP {p.critical && '!!'}
+                <div>{p.xpAmount > 0 ? `+${p.xpAmount}` : p.xpAmount} XP</div>
+                {p.coinAmount !== 0 && (
+                  <div className="text-amber-400 text-sm font-black flex items-center gap-1">
+                    {p.coinAmount > 0 ? `+${p.coinAmount}` : p.coinAmount} ₵
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -156,38 +165,17 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
             <h3 className={`font-black text-xl tracking-tight transition-all uppercase ${task.status === 'completed' ? 'text-slate-600' : 'text-slate-100'}`}>
               {task.title}
             </h3>
-            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getDifficultyColor(task.difficulty)}`}>
-              {task.difficulty}
+            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all duration-700 ${getDifficultyColor(task.difficulty)}`}>
+              {getDisplayedDifficulty()}
             </span>
           </div>
           <p className="text-sm text-slate-500 font-bold leading-relaxed">{task.description}</p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onFetchAI(); }}
-            className={`p-4 rounded-2xl border transition-all flex items-center gap-3 text-[10px] font-black uppercase tracking-widest ${isLoadingAI ? 'bg-slate-900 border-slate-800 text-slate-700' : aiContent ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' : 'bg-emerald-600/10 text-emerald-400 border-emerald-600/20 hover:bg-emerald-600 hover:text-white'}`}
-          >
-            {isLoadingAI ? <div className="w-5 h-5 border-2 border-slate-700 border-t-emerald-500 animate-spin rounded-full"></div> : <span>Insight</span>}
-          </button>
-          
-          {navigator.share && (
-            <button 
-              onClick={handleShare}
-              className="p-3 rounded-2xl border border-slate-800 bg-slate-900/50 text-slate-500 hover:text-white hover:border-slate-600 transition-all flex items-center justify-center"
-              title="Share Quest"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6a3 3 0 100-2.684m0 2.684l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 
       {isExpanded && (
         <div className="px-7 pb-6 animate-in slide-in-from-top-4 duration-300">
-          <div className="bg-black/30 rounded-3xl p-6 border border-slate-800/50 space-y-4">
+          <div className="space-y-4">
             <h4 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] px-2 mb-2">Observation Streams</h4>
             
             {activePrereqs.map((p, idx) => (
@@ -200,9 +188,10 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                     {popups.filter(pop => pop.type === 'prereq' && pop.prereqId === p.id).map(pop => (
                       <div 
                         key={pop.id} 
-                        className={`absolute font-black animate-float-up pointer-events-none whitespace-nowrap ${pop.amount > 0 ? (pop.critical ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]') : 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]'} ${pop.critical ? 'text-4xl' : 'text-2xl'}`}
+                        className={`absolute font-black animate-float-up pointer-events-none whitespace-nowrap flex flex-col items-center gap-1 ${pop.xpAmount > 0 ? (pop.critical ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]') : 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]'} ${pop.critical ? 'text-4xl' : 'text-2xl'}`}
                       >
-                        {pop.amount > 0 ? `+${pop.amount}` : pop.amount} XP {pop.critical && '!!'}
+                        <div>+{pop.xpAmount} XP</div>
+                        <div className="text-amber-400 text-[10px] font-black flex items-center gap-1">+{pop.coinAmount} ₵</div>
                       </div>
                     ))}
                   </div>
@@ -284,9 +273,10 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                         {popups.filter(pop => pop.type === 'prereq' && pop.prereqId === p.id).map(pop => (
                           <div 
                             key={pop.id} 
-                            className={`absolute font-black animate-float-up pointer-events-none whitespace-nowrap ${pop.amount > 0 ? (pop.critical ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]') : 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]'} ${pop.critical ? 'text-4xl' : 'text-2xl'}`}
+                            className={`absolute font-black animate-float-up pointer-events-none whitespace-nowrap flex flex-col items-center gap-1 ${pop.xpAmount > 0 ? (pop.critical ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]') : 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]'} ${pop.critical ? 'text-4xl' : 'text-2xl'}`}
                           >
-                            {pop.amount > 0 ? `+${pop.amount}` : pop.amount} XP {pop.critical && '!!'}
+                            <div>{pop.xpAmount > 0 ? `+${pop.xpAmount}` : pop.xpAmount} XP</div>
+                            <div className="text-amber-400 text-[10px] font-black flex items-center gap-1">{pop.coinAmount > 0 ? `+${pop.coinAmount}` : pop.coinAmount} ₵</div>
                           </div>
                         ))}
                       </div>
@@ -300,30 +290,6 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                 ))}
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {isExpanded && aiContent && (
-        <div className="p-8 border-t border-slate-800 bg-black/40 rounded-b-[2rem] animate-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Entropy Analysis</h4>
-          </div>
-          
-          <div className="whitespace-pre-wrap text-sm text-slate-400 leading-relaxed font-bold italic mb-6">
-            {aiContent.text}
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-[2rem]">
-              <h5 className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2">Strategy</h5>
-              <p className="text-xs text-slate-400 font-bold leading-relaxed">{aiContent.proTip}</p>
-            </div>
-            <div className="p-6 bg-rose-500/5 border border-rose-500/10 rounded-[2rem]">
-              <h5 className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-2">Chaos Warning</h5>
-              <p className="text-xs text-slate-400 font-bold leading-relaxed">{aiContent.securityWarning}</p>
-            </div>
           </div>
         </div>
       )}

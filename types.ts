@@ -1,4 +1,3 @@
-
 export interface Prerequisite {
   id: string;
   label: string;
@@ -13,6 +12,9 @@ export interface User {
   level: number;
   xp: number;
   totalXp: number;
+  coins: number;
+  ownedAvatarIds: string[];
+  selectedAvatarId: string;
 }
 
 export interface AuthUser {
@@ -46,6 +48,7 @@ export interface Task {
   iteration?: number;
   cycle?: number;
   selectedSkill?: string;
+  completedAt?: string;
 }
 
 export interface Comment {
@@ -65,7 +68,8 @@ export interface Reminder {
 
 export enum AppTab {
   CHECKLIST = 'flow',
-  GUIDE = 'guide',
+  HISTORY = 'history',
+  SHOP = 'shop',
   ANALYTICS = 'balance',
   WIDGETS = 'widgets'
 }
@@ -80,15 +84,13 @@ export interface AppState {
   selectedProjectId: string | 'all';
   isSidebarOpen: boolean;
   isOnline: boolean;
-  selectedPhase: 'The Beginning' | 'Building Habits' | 'Finding Balance';
-  archAdvice: string;
-  isArchLoading: boolean;
-  aiContentMap: Record<string, any>;
   skillCache: Record<string, any>;
-  loadingTasks: Record<string, boolean>;
   progress: number;
   level: number;
   xp: number;
+  coins: number;
+  ownedAvatarIds: string[];
+  selectedAvatarId: string;
   authUser: AuthUser | null;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
 }

@@ -1,14 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Device } from '@capacitor/device';
 import { Task, AppTab, Project, User, AuthUser, Prerequisite } from '../types.ts';
 import { 
   INITIAL_TASKS, 
   INITIAL_PROJECTS, 
   INITIAL_USERS 
 } from '../constants.tsx';
-import { generateSmartTaskBreakdown, getArchitectureAdvice } from '../services/geminiService.ts';
-import { CloudService } from '../services/cloudService.ts';
 
-const STORAGE_KEY = 'life_physics_prod_state';
+const STORAGE_PREFIX = 'life_physics_v1_';
 
 const XP_VALUES = {
   'Easy Start': 100,
@@ -29,18 +28,14 @@ export const useAppViewModel = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [xp, setXp] = useState(0);
+  const [coins, setCoins] = useState(0);
   const [level, setLevel] = useState(1);
-  const [aiContentMap, setAiContentMap] = useState<Record<string, any>>({});
-  const [loadingTasks, setLoadingTasks] = useState<Record<string, boolean>>({});
-
-  const [selectedPhase, setSelectedPhase] = useState<'The Beginning' | 'Building Habits' | 'Finding Balance'>('The Beginning');
-  const [archAdvice, setArchAdvice] = useState('');
-  const [isArchLoading, setIsArchLoading] = useState(false);
+  const [ownedAvatarIds, setOwnedAvatarIds] = useState<string[]>(['default']);
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>('default');
   
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
-  // Android Native Integration: Haptics & Badging
   const triggerHaptic = (pattern: number | number[] = 50) => {
     if ('vibrate' in navigator) {
       navigator.vibrate(pattern);
@@ -58,24 +53,47 @@ export const useAppViewModel = () => {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    const initDeviceAuth = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        setTasks(parsed.tasks || INITIAL_TASKS);
-        setProjects(parsed.projects || INITIAL_PROJECTS);
-        setUsers(parsed.users || INITIAL_USERS);
-        setXp(parsed.xp || 0);
-        setLevel(parsed.level || 1);
-        if (parsed.authUser) setAuthUser(parsed.authUser);
-      } catch (e) {
-        setTasks(INITIAL_TASKS);
+        const idResult = await Device.getId();
+        const info = await Device.getInfo();
+        const deviceId = idResult.identifier;
+        
+        const hardwareUser: AuthUser = {
+          id: deviceId,
+          name: `Architect-${deviceId.slice(0, 4)}`,
+          email: `${deviceId.slice(0, 8)}@${info.model}.internal`,
+          picture: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${deviceId}`,
+          token: 'hardware_identity'
+        };
+
+        setAuthUser(hardwareUser);
+        
+        const storageKey = STORAGE_PREFIX + deviceId;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setTasks(parsed.tasks || INITIAL_TASKS);
+          setProjects(parsed.projects || INITIAL_PROJECTS);
+          setUsers(parsed.users || INITIAL_USERS);
+          setXp(parsed.xp || 0);
+          setCoins(parsed.coins || 0);
+          setLevel(parsed.level || 1);
+          setOwnedAvatarIds(parsed.ownedAvatarIds || ['default']);
+          setSelectedAvatarId(parsed.selectedAvatarId || 'default');
+        } else {
+          setTasks(INITIAL_TASKS);
+          setProjects(INITIAL_PROJECTS);
+          setUsers(INITIAL_USERS);
+        }
+        setSyncStatus('synced');
+      } catch (err) {
+        console.error("Hardware ID failed, falling back to local guest", err);
+        setSyncStatus('error');
       }
-    } else {
-      setTasks(INITIAL_TASKS);
-      setProjects(INITIAL_PROJECTS);
-      setUsers(INITIAL_USERS);
-    }
+    };
+
+    initDeviceAuth();
 
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
@@ -87,62 +105,34 @@ export const useAppViewModel = () => {
   }, []);
 
   useEffect(() => {
-    if (tasks.length > 0) {
-      const stateToSave = { tasks, projects, users, xp, level, authUser };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-
-      // Update badge whenever tasks change
+    if (authUser && tasks.length > 0) {
+      const stateToSave = { tasks, projects, users, xp, coins, level, authUser, ownedAvatarIds, selectedAvatarId };
+      const storageKey = STORAGE_PREFIX + authUser.id;
+      localStorage.setItem(storageKey, JSON.stringify(stateToSave));
       const pendingCount = tasks.filter(t => t.status === 'pending').length;
       updateAppBadge(pendingCount);
-
-      if (authUser && syncStatus !== 'syncing') {
-        setSyncStatus('syncing');
-        CloudService.pushProgress(authUser.id, authUser.token, stateToSave)
-          .then(() => setSyncStatus('synced'))
-          .catch(() => setSyncStatus('error'));
-      }
     }
-  }, [tasks, projects, users, xp, level, authUser, syncStatus, updateAppBadge]);
+  }, [tasks, projects, users, xp, coins, level, authUser, updateAppBadge, ownedAvatarIds, selectedAvatarId]);
 
-  const handleGoogleSignIn = useCallback((response: any) => {
-    try {
-      const parts = response.credential.split('.');
-      if (parts.length < 2) return;
-      const base64Url = parts[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(window.atob(base64));
-
-      const newAuthUser: AuthUser = {
-        id: payload.sub,
-        name: payload.name,
-        email: payload.email,
-        picture: payload.picture,
-        token: response.credential
-      };
-
-      setAuthUser(newAuthUser);
-      setSyncStatus('syncing');
-
-      CloudService.pullProgress(newAuthUser.id, newAuthUser.token).then((cloudRes: any) => {
-        if (cloudRes && cloudRes.data) {
-          const d = cloudRes.data;
-          setTasks(d.tasks || tasks);
-          setXp(d.xp || xp);
-          setLevel(d.level || level);
-          setSyncStatus('synced');
-        } else {
-          setSyncStatus('synced');
-        }
-      });
-    } catch (err) {
-      setSyncStatus('error');
+  const buyAvatar = useCallback((id: string, price: number) => {
+    if (coins >= price && !ownedAvatarIds.includes(id)) {
+      setCoins(prev => prev - price);
+      setOwnedAvatarIds(prev => [...prev, id]);
+      triggerHaptic([50, 10, 50]);
+      return true;
     }
-  }, [tasks, xp, level]);
+    triggerHaptic(10);
+    return false;
+  }, [coins, ownedAvatarIds]);
 
-  const signOut = useCallback(() => {
-    setAuthUser(null);
-    setSyncStatus('idle');
-  }, []);
+  const selectAvatar = useCallback((id: string) => {
+    if (ownedAvatarIds.includes(id)) {
+      setSelectedAvatarId(id);
+      triggerHaptic(50);
+      return true;
+    }
+    return false;
+  }, [ownedAvatarIds]);
 
   const addXp = useCallback((amount: number) => {
     setXp(currentXp => {
@@ -155,14 +145,18 @@ export const useAppViewModel = () => {
         currentLevel++;
         setLevel(currentLevel);
         needed = getXPNeededForLevel(currentLevel);
-        triggerHaptic([100, 50, 100]); // Level up pulse
+        triggerHaptic([100, 50, 100]);
       }
       return Math.max(0, nextXp); 
     });
   }, [level]);
 
+  const addCoins = useCallback((amount: number) => {
+    setCoins(prev => Math.max(0, prev + amount));
+  }, []);
+
   const toggleTask = useCallback((id: string) => {
-    let result = { xp: 0, critical: false };
+    let result = { xp: 0, coins: 0, critical: false };
     setTasks(prev => {
       const task = prev.find(t => t.id === id);
       if (!task) return prev;
@@ -171,23 +165,32 @@ export const useAppViewModel = () => {
       
       if (isCompleting) {
         const isCritical = Math.random() < 0.2;
-        const gain = isCritical ? Math.floor(baseXP * 2.5) : baseXP;
-        result = { xp: gain, critical: isCritical };
-        addXp(gain);
-        triggerHaptic(isCritical ? [50, 30, 50] : 50);
+        const xpGain = isCritical ? Math.floor(baseXP * 2.5) : baseXP;
+        const lootRoll = Math.random() < 0.15 ? Math.floor(Math.random() * 150) + 50 : 0;
+        const totalCoins = xpGain + lootRoll;
+
+        result = { xp: xpGain, coins: totalCoins, critical: isCritical || (lootRoll > 0) };
+        addXp(xpGain);
+        addCoins(totalCoins);
+        triggerHaptic(result.critical ? [50, 30, 50] : 50);
       } else {
-        result = { xp: -baseXP, critical: false };
+        result = { xp: -baseXP, coins: -baseXP, critical: false };
         addXp(-baseXP);
-        triggerHaptic(10); // Light haptic for undo
+        addCoins(-baseXP);
+        triggerHaptic(10);
       }
 
-      return prev.map(t => t.id === id ? { ...t, status: isCompleting ? 'completed' : 'pending' } : t);
+      return prev.map(t => t.id === id ? { 
+        ...t, 
+        status: isCompleting ? 'completed' : 'pending',
+        completedAt: isCompleting ? new Date().toISOString() : undefined
+      } : t);
     });
     return result;
-  }, [addXp]);
+  }, [addXp, addCoins]);
 
   const togglePrerequisite = useCallback((taskId: string, prereqId: string) => {
-    let result = { xp: 0, critical: false };
+    let result = { xp: 0, coins: 0, critical: false };
     
     setTasks(prev => {
       return prev.map(task => {
@@ -198,13 +201,18 @@ export const useAppViewModel = () => {
             const isCompleting = !p.completed;
             if (isCompleting) {
               const isCritical = Math.random() < 0.15;
-              const gain = isCritical ? PREREQ_XP * 4 : PREREQ_XP;
-              result = { xp: gain, critical: isCritical };
-              addXp(gain);
+              const xpGain = isCritical ? PREREQ_XP * 4 : PREREQ_XP;
+              const lootRoll = Math.random() < 0.1 ? 25 : 0;
+              const totalCoins = xpGain + lootRoll;
+
+              result = { xp: xpGain, coins: totalCoins, critical: isCritical || (lootRoll > 0) };
+              addXp(xpGain);
+              addCoins(totalCoins);
               triggerHaptic(30);
             } else {
-              result = { xp: -PREREQ_XP, critical: false };
+              result = { xp: -PREREQ_XP, coins: -PREREQ_XP, critical: false };
               addXp(-PREREQ_XP);
+              addCoins(-PREREQ_XP);
               triggerHaptic(10);
             }
             return { ...p, completed: isCompleting };
@@ -213,11 +221,16 @@ export const useAppViewModel = () => {
         });
 
         const allDone = newPrerequisites.length > 0 && newPrerequisites.every(p => p.completed && p.label.trim() !== '');
-        return { ...task, prerequisites: newPrerequisites, status: allDone ? 'completed' : 'pending' };
+        return { 
+          ...task, 
+          prerequisites: newPrerequisites, 
+          status: allDone ? 'completed' : 'pending',
+          completedAt: allDone ? new Date().toISOString() : undefined
+        };
       });
     });
     return result;
-  }, [addXp]);
+  }, [addXp, addCoins]);
 
   const addPrerequisite = useCallback((taskId: string) => {
     triggerHaptic(20);
@@ -266,34 +279,6 @@ export const useAppViewModel = () => {
     }
   }, []);
 
-  const fetchTaskAI = useCallback(async (taskId: string, taskTitle: string) => {
-    const targetTask = tasks.find(t => t.id === taskId);
-    if (!targetTask || aiContentMap[taskId] || !navigator.onLine) return;
-    
-    setLoadingTasks(prev => ({ ...prev, [taskId]: true }));
-    try {
-      const labels = targetTask?.prerequisites?.map(p => p.label).filter(l => l.trim() !== '');
-      const result = await generateSmartTaskBreakdown(taskTitle, labels, targetTask.selectedSkill);
-      setAiContentMap(prev => ({ ...prev, [taskId]: result }));
-    } catch (err) {
-    } finally {
-      setLoadingTasks(prev => ({ ...prev, [taskId]: false }));
-    }
-  }, [aiContentMap, tasks]);
-
-  const handlePhaseChange = useCallback(async (phase: 'The Beginning' | 'Building Habits' | 'Finding Balance') => {
-    setSelectedPhase(phase);
-    if (!navigator.onLine) return;
-    setIsArchLoading(true);
-    try {
-      const advice = await getArchitectureAdvice(phase);
-      setArchAdvice(advice);
-    } catch (err) {
-    } finally {
-      setIsArchLoading(false);
-    }
-  }, []);
-
   const progress = useMemo(() => {
     if (tasks.length === 0) return 0;
     const completed = tasks.filter(t => t.status === 'completed').length;
@@ -309,33 +294,29 @@ export const useAppViewModel = () => {
       selectedProjectId,
       isSidebarOpen,
       progress,
-      aiContentMap,
-      loadingTasks,
       isOnline,
       level,
       xp,
+      coins,
+      ownedAvatarIds,
+      selectedAvatarId,
       xpToNextLevel: getXPNeededForLevel(level),
       rankTitle: level < 5 ? "Fragment Seeker" : level < 10 ? "Momentum Builder" : "Pattern Mapper",
       authUser,
-      syncStatus,
-      selectedPhase,
-      archAdvice,
-      isArchLoading
+      syncStatus
     },
     actions: {
       setActiveTab,
       toggleTask,
       togglePrerequisite,
       setIsSidebarOpen,
-      fetchTaskAI,
       setSelectedProjectId,
-      handleGoogleSignIn,
-      signOut,
       addPrerequisite,
       updatePrerequisiteLabel,
       selectTaskSkill,
-      handlePhaseChange,
-      addCalendarReminder
+      addCalendarReminder,
+      buyAvatar,
+      selectAvatar
     }
   };
 };

@@ -21,7 +21,7 @@ export const COMMON_SKILLS = [
   "Basic Tool Use", "Changing a Light Bulb", "Assembling Furniture", "Tie a Necktie", "Driving a Manual Transmission",
   "Checking Oil and Tire Pressure", "Changing a Car Battery", "Interior Decorating", "Etiquette and Manners", "Packing",
   "Cultural Awareness", "Patience", "Study Skills", "Creative Thinking", "Travel Planning",
-  "Assertiveness", "Setting Boundaries", "Persuasion", "Situational Awareness", "Using Public Transportation",
+  "Assertiveness", "Set Boundaries", "Persuasion", "Situational Awareness", "Using Public Transportation",
   "Self-Confidence", "Prioritization", "Ironing Clothes", "Smartphone Usage", "Personal Grooming"
 ];
 
@@ -33,7 +33,10 @@ export const INITIAL_USERS: User[] = [
     avatarUrl: 'https://i.pravatar.cc/150?u=u1',
     level: 1,
     xp: 0,
-    totalXp: 0
+    totalXp: 0,
+    coins: 0,
+    ownedAvatarIds: ['default'],
+    selectedAvatarId: 'default'
   }
 ];
 
@@ -48,7 +51,7 @@ export const INITIAL_TASKS: Task[] = [
     title: 'Notice Your Life',
     category: 'Habits',
     status: 'pending',
-    description: 'Insert the tasks that occupy your current spacetime to visualize their weight.',
+    description: '',
     difficulty: 'Some Weight',
     assigneeId: 'u1',
     createdAt: new Date().toISOString(),

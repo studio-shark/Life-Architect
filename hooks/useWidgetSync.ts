@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import WidgetBridge from '../plugins/widget-bridge.ts';
@@ -31,20 +32,12 @@ export function useWidgetSync(
         // Convert tasks to JSON string
         const tasksJson = JSON.stringify(pendingTasks);
 
-        // Generate insight text based on task count
-        const insight = pendingTasks.length > 2
-          ? 'HIGH ENTROPY DETECTED IN RECENT HABITS'
-          : pendingTasks.length > 0
-          ? 'SYSTEM FLOW STABILIZING'
-          : 'SYSTEM ALIGNED AND BALANCED';
-
         // Update all widgets
         await WidgetBridge.updateWidgetData({
           level,
           xp,
           xpToNext: xpToNextLevel,
-          tasks: tasksJson,
-          insight
+          tasks: tasksJson
         });
 
         console.log('Widgets synced successfully');
