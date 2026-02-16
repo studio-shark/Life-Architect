@@ -61,7 +61,7 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <div className="mb-10">
-        <h2 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">Native System Sync</h2>
+        <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase mb-2">Native System Sync</h2>
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Live Preview of your Home Screen Widgets & Shortcuts</p>
       </div>
 
@@ -77,13 +77,13 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
         {/* Widget 1: Status Glance */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-4">
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Glance Progress (2x2)</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Glance Progress (2x2)</p>
           </div>
-          <div className="bg-[#1f2128] rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+          <div className="bg-white dark:bg-[#1f2128] rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-1">Architect Level</span>
-                <h3 className="text-5xl font-black text-white">{level}</h3>
+                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest block mb-1">Architect Level</span>
+                <h3 className="text-5xl font-black text-slate-900 dark:text-white">{level}</h3>
               </div>
               <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-900/50">
                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,7 +97,7 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
                 <span>Memory Flow</span>
                 <span>{Math.round(progressPercent)}%</span>
               </div>
-              <div className="h-4 bg-black/40 rounded-full overflow-hidden p-1 border border-slate-800">
+              <div className="h-4 bg-slate-100 dark:bg-black/40 rounded-full overflow-hidden p-1 border border-slate-200 dark:border-slate-800">
                 <div 
                   className="h-full bg-emerald-500 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(16,185,129,0.5)]" 
                   style={{ width: `${progressPercent}%` }}
@@ -124,25 +124,25 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
 
         {/* Widget 2: List Glance */}
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4">Active Quests (4x2)</p>
-          <div className="bg-[#1a1c22] rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl space-y-5">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Active Quests (4x2)</p>
+          <div className="bg-white dark:bg-[#1a1c22] rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5">
             <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Pending Streams</h4>
             <div className="space-y-3 mb-6">
               {pendingTasks.map(task => (
-                <div key={task.id} className="flex items-center gap-4 bg-black/30 p-4 rounded-2xl border border-slate-800/50 group hover:border-blue-500/30 transition-all">
+                <div key={task.id} className="flex items-center gap-4 bg-slate-50 dark:bg-black/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/50 group hover:border-blue-500/30 transition-all">
                   <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                  <span className="flex-1 text-xs font-bold text-slate-300 uppercase truncate">{task.title}</span>
+                  <span className="flex-1 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase truncate">{task.title}</span>
                 </div>
               ))}
               {pendingTasks.length === 0 && (
-                <div className="text-center py-6 text-slate-600 font-bold text-[10px] uppercase tracking-widest">System Aligned</div>
+                <div className="text-center py-6 text-slate-400 dark:text-slate-600 font-bold text-[10px] uppercase tracking-widest">System Aligned</div>
               )}
             </div>
 
             <button 
               onClick={() => canPinWidgets ? handlePinWidget('tasks', 'Active Quests') : showManualInstructions()}
               disabled={pinningWidget === 'tasks'}
-              className="w-full py-4 rounded-2xl bg-slate-800 text-slate-300 font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {pinningWidget === 'tasks' ? 'Adding to System...' : (
                 <>
@@ -156,16 +156,16 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
 
         {/* Widget 3: Command Console */}
         <div className="space-y-4 md:col-span-2">
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4">Command Console (4x1)</p>
-          <div className="bg-[#1a1c22] rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-8">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Command Console (4x1)</p>
+          <div className="bg-white dark:bg-[#1a1c22] rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-8">
              
              {/* Preview Area */}
              <div className="flex-1 w-full relative">
                 <div className="absolute inset-0 bg-emerald-500/5 blur-2xl rounded-full"></div>
-                <div className="relative bg-[#111214] border border-slate-700/50 rounded-3xl p-4 flex items-center justify-between gap-4 shadow-xl">
+                <div className="relative bg-slate-50 dark:bg-[#111214] border border-slate-200 dark:border-slate-700/50 rounded-3xl p-4 flex items-center justify-between gap-4 shadow-xl">
                     <div className="flex items-center gap-3 opacity-50">
-                       <div className="w-5 h-5 rounded-md border-2 border-slate-600"></div>
-                       <div className="h-2 w-24 bg-slate-700 rounded-full"></div>
+                       <div className="w-5 h-5 rounded-md border-2 border-slate-300 dark:border-slate-600"></div>
+                       <div className="h-2 w-24 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
                     </div>
                     <div className="flex items-center gap-2">
                        <div className="h-10 px-4 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/40">
@@ -201,20 +201,20 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
 
         {/* Shortcut 1: App Menu Simulation */}
         <div className="space-y-4 md:col-span-2">
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4">Android Launcher Shortcuts (Long-Press)</p>
-          <div className="bg-[#14161a] rounded-[2.5rem] p-6 border border-slate-800/50 flex flex-col md:flex-row gap-4">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Android Launcher Shortcuts (Long-Press)</p>
+          <div className="bg-white dark:bg-[#14161a] rounded-[2.5rem] p-6 border border-slate-200 dark:border-slate-800/50 flex flex-col md:flex-row gap-4">
              {[
                { icon: '+', label: 'New Quest', type: 'quickAdd' as const },
                { icon: 'Q', label: 'Quest Log', type: 'status' as const }
              ].map((s, i) => (
-               <div key={i} className="flex-1 bg-black/40 p-5 rounded-2xl border border-slate-800 flex items-center justify-between hover:border-emerald-500/30 transition-all group">
+               <div key={i} className="flex-1 bg-slate-50 dark:bg-black/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between hover:border-emerald-500/30 transition-all group">
                  <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center font-black text-white">{s.icon}</div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-tight">{s.label}</p>
+                    <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tight">{s.label}</p>
                  </div>
                  <button 
                    onClick={() => canPinWidgets ? handlePinWidget(s.type as any, s.label) : showManualInstructions()}
-                   className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
+                   className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-emerald-500 hover:border-emerald-500/30 transition-all"
                    title="Pin Shortcut"
                  >
                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -233,25 +233,25 @@ const WidgetSystem: React.FC<WidgetSystemProps> = ({ level, xp, xpToNextLevel, t
           </svg>
         </div>
         <div>
-          <h3 className="text-xl font-black text-white uppercase mb-2">Final Step: Launcher Integration</h3>
-          <p className="text-sm text-slate-400 font-bold leading-relaxed mb-4">
+          <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase mb-2">Final Step: Launcher Integration</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-bold leading-relaxed mb-4">
             The native Android experience is unlocked by adding this app to your home screen:
           </p>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <li className="flex gap-3 text-xs text-slate-500 font-bold">
-              <span className="text-emerald-400 font-black">01.</span>
+              <span className="text-emerald-500 font-black">01.</span>
               <span>Tap the "Three Dots" (Chrome) or "Install App".</span>
             </li>
             <li className="flex gap-3 text-xs text-slate-500 font-bold">
-              <span className="text-emerald-400 font-black">02.</span>
+              <span className="text-emerald-500 font-black">02.</span>
               <span>Select "Add to Home Screen".</span>
             </li>
             <li className="flex gap-3 text-xs text-slate-500 font-bold">
-              <span className="text-emerald-400 font-black">03.</span>
+              <span className="text-emerald-500 font-black">03.</span>
               <span>Long-press the new icon to see Shortcuts.</span>
             </li>
             <li className="flex gap-3 text-xs text-slate-500 font-bold">
-              <span className="text-emerald-400 font-black">04.</span>
+              <span className="text-emerald-500 font-black">04.</span>
               <span>Add the Chrome Widget to see your Level live.</span>
             </li>
           </ul>

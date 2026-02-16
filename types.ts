@@ -76,7 +76,8 @@ export enum AppTab {
   HISTORY = 'history',
   SHOP = 'shop',
   ANALYTICS = 'balance',
-  WIDGETS = 'widgets'
+  WIDGETS = 'widgets',
+  SETTINGS = 'settings'
 }
 
 export interface AppState {
@@ -98,4 +99,5 @@ export interface AppState {
   selectedAvatarId: string;
   authUser: AuthUser | null;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
+  theme: 'dark' | 'light';
 }

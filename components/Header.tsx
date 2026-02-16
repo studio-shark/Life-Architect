@@ -24,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({
       case AppTab.ANALYTICS: return "Analytics";
       case AppTab.WIDGETS: return "Widgets";
       case AppTab.SHOP: return "Avatar Vault";
+      case AppTab.SETTINGS: return "Settings";
       default: return "";
     }
   };
@@ -34,35 +35,35 @@ const Header: React.FC<HeaderProps> = ({
     <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 mb-4 md:mb-12">
       <div className="flex-1 w-full">
         <div className="flex items-center justify-between md:justify-start gap-6 mb-3">
-          <h1 className="hidden md:block text-4xl md:text-6xl font-black tracking-tighter text-white uppercase">
+          <h1 className="hidden md:block text-4xl md:text-6xl font-black tracking-tighter text-slate-900 dark:text-white uppercase transition-colors duration-300">
             {getTitle()}
           </h1>
           
           <div className="hidden md:flex gap-3">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border ${isOnline ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-slate-700'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`}></span>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border ${isOnline ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500 dark:bg-slate-600'}`}></span>
               {isOnline ? 'Live' : 'Cached'}
             </div>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border ${syncStatus === 'synced' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'}`}>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border ${syncStatus === 'synced' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'}`}>
               Hardware Local
             </div>
           </div>
         </div>
-        <p className="hidden md:block text-slate-500 text-[10px] md:text-sm font-bold uppercase tracking-widest ml-1">
+        <p className="hidden md:block text-slate-500 dark:text-slate-500 text-[10px] md:text-sm font-bold uppercase tracking-widest ml-1">
           Architect Core v1.1.0 • Built for Android
         </p>
       </div>
 
-      <div className="hidden md:flex items-center gap-4 bg-slate-900/30 p-3 rounded-[2rem] border border-slate-800/50">
+      <div className="hidden md:flex items-center gap-4 bg-white dark:bg-slate-900/30 p-3 rounded-[2rem] border border-slate-200 dark:border-slate-800/50 shadow-sm dark:shadow-none transition-colors duration-300">
         {authUser ? (
           <div className="flex items-center gap-5 pl-4">
             <div className="text-right">
-              <p className="text-[10px] font-black text-white uppercase tracking-tight">{authUser.name}</p>
+              <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tight">{authUser.name}</p>
               <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mt-0.5">System Identifier Linked</p>
             </div>
             <div className="relative">
-              <img src={avatarDisplay || ''} className="w-10 h-10 rounded-2xl border-2 border-emerald-500/30 shadow-lg shadow-emerald-500/10 bg-slate-800 p-0.5" alt="Avatar" />
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-[#0a0a0c] rounded-full"></div>
+              <img src={avatarDisplay || ''} className="w-10 h-10 rounded-2xl border-2 border-emerald-500/30 shadow-lg shadow-emerald-500/10 bg-slate-100 dark:bg-slate-800 p-0.5" alt="Avatar" />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#0a0a0c] rounded-full"></div>
             </div>
           </div>
         ) : (

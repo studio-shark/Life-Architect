@@ -36,6 +36,7 @@ export const useAppViewModel = () => {
   
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const triggerHaptic = (pattern: number | number[] = 50) => {
     if ('vibrate' in navigator) {
@@ -51,6 +52,27 @@ export const useAppViewModel = () => {
         (navigator as any).clearAppBadge().catch(() => {});
       }
     }
+  }, []);
+
+  // Theme Handling
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(`${STORAGE_PREFIX}theme`) as 'dark' | 'light' | null;
+    const initialTheme = savedTheme || 'dark';
+    setTheme(initialTheme);
+  }, []);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem(`${STORAGE_PREFIX}theme`, theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    triggerHaptic(50);
   }, []);
 
   useEffect(() => {
@@ -304,7 +326,8 @@ export const useAppViewModel = () => {
       xpToNextLevel: getXPNeededForLevel(level),
       rankTitle: level < 5 ? "Fragment Seeker" : level < 10 ? "Momentum Builder" : "Pattern Mapper",
       authUser,
-      syncStatus
+      syncStatus,
+      theme
     },
     actions: {
       setActiveTab,
@@ -317,7 +340,8 @@ export const useAppViewModel = () => {
       selectTaskSkill,
       addCalendarReminder,
       buyAvatar,
-      selectAvatar
+      selectAvatar,
+      toggleTheme
     }
   };
 };
