@@ -73,8 +73,48 @@ export const useAppViewModel = () => {
   }, [theme]);
 
   // Handle Google Login
-  const handleGoogleLogin = useCallback((token: string) => {
+  const handleGoogleLogin = useCallback(async (token: string) => {
     try {
+      setSyncStatus('syncing');
+
+      // 1. Migration Strategy: Check for local tasks from hardware/guest session
+      if (authUser && authUser.token === 'hardware_identity') {
+          const storageKey = STORAGE_PREFIX + authUser.id;
+          const saved = localStorage.getItem(storageKey);
+          
+          if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed.tasks && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
+                  const localTasks: Task[] = parsed.tasks;
+                  console.log(`Migrating ${localTasks.length} tasks to cloud...`);
+                  
+                  // Attempt to upload all local tasks to the new cloud account
+                  await Promise.all(localTasks.map(async (task) => {
+                      try {
+                           const res = await fetch('/api/tasks', {
+                               method: 'POST',
+                               headers: {
+                                   'Content-Type': 'application/json',
+                                   'Authorization': `Bearer ${token}`
+                               },
+                               body: JSON.stringify(task)
+                           });
+                           if (!res.ok) {
+                             console.warn(`Task ${task.title} might already exist or failed to sync.`);
+                           }
+                      } catch (err) {
+                          console.error('Migration upload failed for task', task.id, err);
+                      }
+                  }));
+                  
+                  // Clear local storage after migration attempt to prevent duplicates/stale state
+                  localStorage.removeItem(storageKey);
+                  console.log('Local storage migration complete.');
+              }
+          }
+      }
+
+      // 2. Set Auth State
       setGoogleToken(token);
       const decoded: any = jwtDecode(token);
       
@@ -87,40 +127,30 @@ export const useAppViewModel = () => {
       };
       
       setAuthUser(user);
-      setSyncStatus('syncing');
       
-      // Load cloud data immediately
-      fetch('/api/tasks', {
+      // 3. Load cloud data (Merged)
+      const res = await fetch('/api/tasks', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'success' && data.tasks) {
-          if (data.tasks.length > 0) {
-             const parsedTasks = data.tasks.map((t: any) => ({
-               ...t,
-               prerequisites: typeof t.prerequisites === 'string' ? JSON.parse(t.prerequisites) : t.prerequisites
-             }));
-             setTasks(parsedTasks);
-          } else {
-             // If cloud is empty, keep current tasks but we'll likely push them later if we implement that logic
-             // For now, we respect the cloud source of truth
-             setTasks([]);
-          }
-          setSyncStatus('synced');
-        }
-      })
-      .catch(err => {
-        console.error("Sync failed", err);
-        setSyncStatus('error');
       });
+      
+      const data = await res.json();
+      if (data.status === 'success' && data.tasks) {
+         // Parse prerequisites JSON string from DB
+         const parsedTasks = data.tasks.map((t: any) => ({
+           ...t,
+           prerequisites: typeof t.prerequisites === 'string' ? JSON.parse(t.prerequisites) : t.prerequisites
+         }));
+         setTasks(parsedTasks);
+         setSyncStatus('synced');
+      }
 
     } catch (e) {
       console.error("Login processing error", e);
+      setSyncStatus('error');
     }
-  }, []);
+  }, [authUser]);
 
   // Initial Hardware/Guest Setup
   useEffect(() => {
@@ -373,18 +403,10 @@ export const useAppViewModel = () => {
       
       const updatedTask = { ...task, prerequisites: task.prerequisites?.map(p => p.id === pid ? { ...p, label } : p) };
       
-      // Debounce or just update state. Real sync usually happens on blur or delay. 
-      // For simplicity in this prompt, we sync the state. In a real app, use a debounce here.
-      // We'll skip aggressive syncing on every keystroke to avoid API spam, 
-      // but ensure it's saved when 'Enter' is pressed or 'Add Task' is clicked (which usually triggers a re-render or other action)
-      // Actually, let's just sync on completion or significant events, but the user requested API usage.
-      // We'll optimistically update state.
-      
       return prev.map(t => t.id === taskId ? updatedTask : t);
     });
   }, []);
 
-  // New: Add Task Function
   const addTask = useCallback(async (title: string, description: string = '', difficulty: 'Easy Start' | 'Some Weight' | 'Heavy Weight' = 'Some Weight') => {
       const newTask: Task = {
           id: Math.random().toString(36).substr(2, 9),

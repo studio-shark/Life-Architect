@@ -74,8 +74,18 @@
 <body class="bg-slate-50 dark:bg-[#0a0a0c] text-slate-900 dark:text-slate-100 transition-colors duration-300">
     <div id="root"></div>
     <script>
-      // Service Worker Disabled for Preview Environment
-      // if ('serviceWorker' in navigator) { ... }
+      // Service Worker Killer
+      // This script forces unregistration of any existing service workers to clear cache issues
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('Service Worker Unregistered');
+          }
+        }).catch(function(error) {
+            console.error('Error unregistering service worker:', error);
+        });
+      }
       console.log('PWA Architect: Service Worker Disabled for Development');
     </script>
 </body>
