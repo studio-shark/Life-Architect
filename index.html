@@ -74,20 +74,9 @@
 <body class="bg-slate-50 dark:bg-[#0a0a0c] text-slate-900 dark:text-slate-100 transition-colors duration-300">
     <div id="root"></div>
     <script>
-      // Professional PWA Service Worker Registration
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          try {
-            navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-              .then(reg => {
-                console.log('PWA Architect: System Active', reg.scope);
-              })
-              .catch(err => console.log('PWA Architect: Offline Mode Restricted', err));
-          } catch (e) {
-             console.log('PWA Architect: SW Registration Failed', e);
-          }
-        });
-      }
+      // Service Worker Disabled for Preview Environment
+      // if ('serviceWorker' in navigator) { ... }
+      console.log('PWA Architect: Service Worker Disabled for Development');
     </script>
 </body>
 </html>

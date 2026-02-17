@@ -59,7 +59,7 @@ async function initDb() {
   try {
     const connection = await pool.getConnection();
     
-    // Create Users table with google_id as PK
+    // Create Users table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         google_id VARCHAR(255) PRIMARY KEY,
@@ -68,7 +68,7 @@ async function initDb() {
       )
     `);
 
-    // Create Tasks table with user_id as VARCHAR FK
+    // Create Tasks table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tasks (
         id VARCHAR(255) PRIMARY KEY,
@@ -79,7 +79,7 @@ async function initDb() {
         category VARCHAR(50),
         status VARCHAR(50),
         difficulty VARCHAR(50),
-        created_at VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at VARCHAR(255),
         prerequisites JSON,
         FOREIGN KEY (user_id) REFERENCES users(google_id) ON DELETE CASCADE
@@ -150,7 +150,6 @@ app.get('/api/tasks', verifyUser, async (req, res) => {
   if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
   
   try {
-    // Use req.user.google_id
     const [rows] = await pool.query('SELECT * FROM tasks WHERE user_id = ?', [req.user.google_id]);
     res.json({ status: 'success', tasks: rows });
   } catch (err) {
@@ -159,47 +158,69 @@ app.get('/api/tasks', verifyUser, async (req, res) => {
   }
 });
 
-// POST /api/tasks - Secure Sync
+// POST /api/tasks - Insert a new task
 app.post('/api/tasks', verifyUser, async (req, res) => {
   if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
   
-  const { tasks } = req.body;
-  if (!Array.isArray(tasks)) return res.status(400).json({ status: 'error', message: 'Invalid format' });
+  const task = req.body;
+  if (!task.id || !task.title) return res.status(400).json({ status: 'error', message: 'Invalid task data' });
 
-  const connection = await pool.getConnection();
   try {
-    await connection.beginTransaction();
-    
-    // Simple Sync: Upsert tasks
-    for (const task of tasks) {
-      await connection.query(`
-        INSERT INTO tasks (id, user_id, title, description, category, status, difficulty, created_at, completed_at, prerequisites)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-        title=VALUES(title), description=VALUES(description), status=VALUES(status), 
-        completed_at=VALUES(completed_at), prerequisites=VALUES(prerequisites)
-      `, [
-        task.id, 
-        req.user.google_id, // Use google_id 
-        task.title, 
-        task.description, 
-        task.category, 
-        task.status, 
-        task.difficulty, 
-        task.created_at, 
-        task.completed_at, 
-        JSON.stringify(task.prerequisites || [])
-      ]);
+    await pool.query(`
+      INSERT INTO tasks (id, user_id, title, description, category, status, difficulty, created_at, completed_at, prerequisites)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      task.id, 
+      req.user.google_id, 
+      task.title, 
+      task.description, 
+      task.category, 
+      task.status, 
+      task.difficulty, 
+      task.created_at || new Date().toISOString(), // Fallback if not provided
+      task.completed_at, 
+      JSON.stringify(task.prerequisites || [])
+    ]);
+
+    res.json({ status: 'success', message: 'Task created successfully' });
+  } catch (err) {
+    console.error('Create Task Error:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to create task' });
+  }
+});
+
+// PUT /api/tasks/:id - Update an existing task
+app.put('/api/tasks/:id', verifyUser, async (req, res) => {
+  if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
+  
+  const { id } = req.params;
+  const task = req.body;
+
+  try {
+    const [result] = await pool.query(`
+      UPDATE tasks 
+      SET title = ?, description = ?, category = ?, status = ?, difficulty = ?, completed_at = ?, prerequisites = ?
+      WHERE id = ? AND user_id = ?
+    `, [
+      task.title, 
+      task.description, 
+      task.category, 
+      task.status, 
+      task.difficulty, 
+      task.completed_at, 
+      JSON.stringify(task.prerequisites || []),
+      id,
+      req.user.google_id
+    ]);
+
+    if (result.affectedRows === 0) {
+        return res.status(404).json({ status: 'error', message: 'Task not found or unauthorized' });
     }
 
-    await connection.commit();
-    res.json({ status: 'success', message: 'Synced successfully' });
+    res.json({ status: 'success', message: 'Task updated successfully' });
   } catch (err) {
-    await connection.rollback();
-    console.error('Sync Error:', err);
-    res.status(500).json({ status: 'error', message: 'Sync failed' });
-  } finally {
-    connection.release();
+    console.error('Update Task Error:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to update task' });
   }
 });
 
