@@ -4,10 +4,23 @@
   "version": "1.0.0",
   "description": "Life Physics - Science of Habits and Emotions",
   "private": true,
+  "type": "module",
   "scripts": {
-    "start": "npx serve -s . -l 8080"
+    "start": "node server.js",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "serve": "^14.2.0"
+    "express": "^4.19.2",
+    "mysql2": "^3.9.2",
+    "google-auth-library": "^9.7.0",
+    "serve": "^14.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "vite": "^5.1.4",
+    "typescript": "^5.2.2"
   }
 }
