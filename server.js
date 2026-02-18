@@ -138,9 +138,10 @@ app.post('/api/auth/login', async (req, res) => {
 
     // 2. DB Upsert (Insert or Update)
     if (pool) {
+        // Updated query to default preferences to '{}' and handle duplicates
         const query = `
-          INSERT INTO users (google_id, email, name, picture) 
-          VALUES (?, ?, ?, ?) 
+          INSERT INTO users (google_id, email, name, picture, preferences) 
+          VALUES (?, ?, ?, ?, '{}') 
           ON DUPLICATE KEY UPDATE name = VALUES(name), picture = VALUES(picture)
         `;
         await pool.query(query, [googleId, email, name, picture]);
@@ -155,6 +156,10 @@ app.post('/api/auth/login', async (req, res) => {
         const [rows] = await pool.query('SELECT preferences FROM users WHERE google_id = ?', [googleId]);
         if (rows.length > 0 && rows[0].preferences) {
             preferences = rows[0].preferences;
+             // Handle if preferences is returned as string by driver
+             if (typeof preferences === 'string') {
+                try { preferences = JSON.parse(preferences); } catch(e) {}
+             }
         }
       } catch (e) {
         console.warn("Failed to fetch preferences", e);
@@ -169,8 +174,8 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Auth Error:', error);
-    res.status(401).json({ error: 'Invalid Token' });
+    console.error('Auth Verification Failed:', error);
+    res.status(401).json({ error: 'Invalid Google Token' });
   }
 });
 

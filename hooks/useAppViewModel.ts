@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Device } from '@capacitor/device';
 import { jwtDecode } from 'jwt-decode';
 import { Task, AppTab, Project, User, AuthUser, Prerequisite } from '../types.ts';
+import { API_BASE_URL } from '../services/api.ts';
 import { 
   INITIAL_TASKS, 
   INITIAL_PROJECTS, 
@@ -78,7 +79,8 @@ export const useAppViewModel = () => {
       setSyncStatus('syncing');
 
       // 1. Verify token with Backend (Robust Auth Flow)
-      const authRes = await fetch('/api/auth/login', {
+      // Use API_BASE_URL to ensure this works on Native Android
+      const authRes = await fetch(`${API_BASE_URL}/api/auth/login`, {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json'
@@ -113,7 +115,7 @@ export const useAppViewModel = () => {
                   // Attempt to upload all local tasks to the new cloud account
                   await Promise.all(localTasks.map(async (task) => {
                       try {
-                           const res = await fetch('/api/tasks', {
+                           const res = await fetch(`${API_BASE_URL}/api/tasks`, {
                                method: 'POST',
                                headers: {
                                    'Content-Type': 'application/json',
@@ -148,7 +150,7 @@ export const useAppViewModel = () => {
       });
       
       // 4. Load cloud data (Merged)
-      const res = await fetch('/api/tasks', {
+      const res = await fetch(`${API_BASE_URL}/api/tasks`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -232,7 +234,7 @@ export const useAppViewModel = () => {
   const syncTaskToCloud = async (task: Task, method: 'POST' | 'PUT') => {
     if (!authUser || !googleToken || !isOnline || authUser.token === 'hardware_identity') return;
     
-    const url = method === 'POST' ? '/api/tasks' : `/api/tasks/${task.id}`;
+    const url = method === 'POST' ? `${API_BASE_URL}/api/tasks` : `${API_BASE_URL}/api/tasks/${task.id}`;
     
     try {
         setSyncStatus('syncing');
@@ -443,7 +445,7 @@ export const useAppViewModel = () => {
       if (authUser && googleToken && isOnline && authUser.token !== 'hardware_identity') {
           try {
               setSyncStatus('syncing');
-              const response = await fetch('/api/tasks', {
+              const response = await fetch(`${API_BASE_URL}/api/tasks`, {
                   method: 'POST',
                   headers: {
                       'Content-Type': 'application/json',
@@ -500,7 +502,7 @@ export const useAppViewModel = () => {
       
       // Sync to cloud if logged in
       if (authUser && googleToken && isOnline && authUser.token !== 'hardware_identity') {
-          fetch('/api/user/settings', {
+          fetch(`${API_BASE_URL}/api/user/settings`, {
               method: 'PUT',
               headers: {
                   'Content-Type': 'application/json',

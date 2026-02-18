@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 
-const API_BASE_URL = Capacitor.isNativePlatform() 
+export const API_BASE_URL = Capacitor.isNativePlatform() 
   ? 'https://life-physics-architect-222612925549.us-west1.run.app' 
   : '';
 
