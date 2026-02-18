@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Device } from '@capacitor/device';
 import { jwtDecode } from 'jwt-decode';
@@ -78,7 +77,24 @@ export const useAppViewModel = () => {
     try {
       setSyncStatus('syncing');
 
-      // 1. Migration Strategy: Check for local tasks from hardware/guest session
+      // 1. Verify token with Backend (Robust Auth Flow)
+      const authRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ token })
+      });
+
+      if (!authRes.ok) {
+          console.error("Backend auth failed:", await authRes.text());
+          throw new Error('Backend authentication verification failed');
+      }
+
+      const authData = await authRes.json();
+      const userProfile = authData.user;
+
+      // 2. Migration Strategy: Check for local tasks from hardware/guest session
       if (authUser && authUser.token === 'hardware_identity') {
           const storageKey = STORAGE_PREFIX + authUser.id;
           const saved = localStorage.getItem(storageKey);
@@ -108,28 +124,24 @@ export const useAppViewModel = () => {
                       }
                   }));
                   
-                  // Clear local storage after migration attempt to prevent duplicates/stale state
+                  // Clear local storage after migration attempt
                   localStorage.removeItem(storageKey);
                   console.log('Local storage migration complete.');
               }
           }
       }
 
-      // 2. Set Auth State
+      // 3. Set Auth State from Verified Profile
       setGoogleToken(token);
-      const decoded: any = jwtDecode(token);
-      
-      const user: AuthUser = {
-        id: decoded.sub,
-        name: decoded.name,
-        email: decoded.email,
-        picture: decoded.picture,
+      setAuthUser({
+        id: userProfile.id,
+        name: userProfile.name,
+        email: userProfile.email,
+        picture: userProfile.picture,
         token: token
-      };
+      });
       
-      setAuthUser(user);
-      
-      // 3. Load cloud data (Merged)
+      // 4. Load cloud data (Merged)
       const res = await fetch('/api/tasks', {
         headers: {
           'Authorization': `Bearer ${token}`

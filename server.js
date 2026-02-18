@@ -6,10 +6,24 @@ import { GoogleAuth, OAuth2Client } from 'google-auth-library';
 
 const app = express();
 const PORT = parseInt(process.env.PORT) || 8080;
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "222612925549-3kjshsapngiopj12220s7q6dvct984md.apps.googleusercontent.com";
+
+// Resolve Client ID from multiple possible sources
+const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "222612925549-3kjshsapngiopj12220s7q6dvct984md.apps.googleusercontent.com";
+const client = new OAuth2Client(CLIENT_ID);
 
 // Middleware for parsing JSON
 app.use(express.json());
+
+// CORS Middleware to allow Authorization headers and cross-origin requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Resolve __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -28,12 +42,9 @@ const dbConfig = {
   }
 };
 
-// Helpers
 const auth = new GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/sqlservice.admin']
 });
-
-const client = new OAuth2Client(CLIENT_ID);
 
 async function getAuthToken() {
   try {
@@ -59,14 +70,20 @@ async function initDb() {
   try {
     const connection = await pool.getConnection();
     
-    // Create Users table
+    // Create Users table with extended profile fields
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         google_id VARCHAR(255) PRIMARY KEY,
         email VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        picture TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Schema Migration: Ensure columns exist if table was already created
+    try { await connection.query(`ALTER TABLE users ADD COLUMN name VARCHAR(255)`); } catch (e) {}
+    try { await connection.query(`ALTER TABLE users ADD COLUMN picture TEXT`); } catch (e) {}
 
     // Create Tasks table
     await connection.query(`
@@ -93,7 +110,52 @@ async function initDb() {
   }
 }
 
-// Authentication Middleware
+// ----------------------------------------------------------------------
+// LOGIN ROUTE
+// ----------------------------------------------------------------------
+app.post('/api/auth/login', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'No token provided' });
+
+  try {
+    // 1. Verify ID Token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name;
+    const picture = payload.picture;
+
+    // 2. DB Upsert (Insert or Update)
+    if (pool) {
+        const query = `
+          INSERT INTO users (google_id, email, name, picture) 
+          VALUES (?, ?, ?, ?) 
+          ON DUPLICATE KEY UPDATE name = VALUES(name), picture = VALUES(picture)
+        `;
+        await pool.query(query, [googleId, email, name, picture]);
+    } else {
+        console.warn('DB not connected, login proceeding without persistence');
+    }
+
+    // 3. Return user profile
+    res.json({
+        status: 'success',
+        user: { id: googleId, email, name, picture },
+        message: 'Login successful'
+    });
+
+  } catch (error) {
+    console.error('Auth Error:', error);
+    res.status(401).json({ error: 'Invalid Token' });
+  }
+});
+
+// Authentication Middleware (for protected routes)
 const verifyUser = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -107,10 +169,7 @@ const verifyUser = async (req, res, next) => {
       audience: CLIENT_ID,
     });
     const payload = ticket.getPayload();
-    
-    // Find or create user in DB
-    const user = await findOrCreateUser(payload.sub, payload.email);
-    req.user = user;
+    req.user = { google_id: payload.sub, email: payload.email };
     next();
   } catch (error) {
     console.error('Auth Verification Error:', error);
@@ -118,34 +177,7 @@ const verifyUser = async (req, res, next) => {
   }
 };
 
-// DB Helper: Find or Create User
-async function findOrCreateUser(googleId, email) {
-  if (!pool) return { google_id: googleId, email };
-  
-  try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE google_id = ?', [googleId]);
-    if (rows.length > 0) return rows[0];
-
-    await pool.query('INSERT INTO users (google_id, email) VALUES (?, ?)', [googleId, email]);
-    return { google_id: googleId, email };
-  } catch (err) {
-    console.error('User DB Error:', err);
-    throw err;
-  }
-}
-
-// Routes
-app.get('/api/test-db', async (req, res) => {
-  if (!pool) return res.status(503).json({ status: 'error', message: 'Database not configured' });
-  try {
-    const [rows] = await pool.query('SELECT 1 as val');
-    res.json({ status: 'success', message: 'Database connection successful', result: rows[0] });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Database connection failed', error: err.message });
-  }
-});
-
-// GET /api/tasks - Secure Fetch
+// GET /api/tasks
 app.get('/api/tasks', verifyUser, async (req, res) => {
   if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
   
@@ -158,7 +190,7 @@ app.get('/api/tasks', verifyUser, async (req, res) => {
   }
 });
 
-// POST /api/tasks - Insert a new task
+// POST /api/tasks
 app.post('/api/tasks', verifyUser, async (req, res) => {
   if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
   
@@ -177,7 +209,7 @@ app.post('/api/tasks', verifyUser, async (req, res) => {
       task.category, 
       task.status, 
       task.difficulty, 
-      task.created_at || new Date().toISOString(), // Fallback if not provided
+      task.created_at || new Date().toISOString(),
       task.completed_at, 
       JSON.stringify(task.prerequisites || [])
     ]);
@@ -189,7 +221,7 @@ app.post('/api/tasks', verifyUser, async (req, res) => {
   }
 });
 
-// PUT /api/tasks/:id - Update an existing task
+// PUT /api/tasks/:id
 app.put('/api/tasks/:id', verifyUser, async (req, res) => {
   if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
   
