@@ -39,5 +39,3 @@ EXPOSE 8080
 
 # Start the Node.js server
 CMD ["node", "server.js"]
-EOF
-
