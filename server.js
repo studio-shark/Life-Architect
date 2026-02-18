@@ -13,7 +13,7 @@ const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT
 const client = new OAuth2Client(CLIENT_ID);
 
 // Initialize Gemini API
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Middleware for parsing JSON
 app.use(express.json());
@@ -115,6 +115,15 @@ async function initDb() {
     console.error('Database initialization failed:', err);
   }
 }
+
+// ----------------------------------------------------------------------
+// SYSTEM ROUTES
+// ----------------------------------------------------------------------
+
+// Health Check for Cloud Run
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 // ----------------------------------------------------------------------
 // LOGIN ROUTE
@@ -255,7 +264,7 @@ app.post('/api/generate-task', async (req, res) => {
 
   try {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-latest',
+        model: 'gemini-3-flash-preview',
         contents: prompt
     });
     res.json({ result: response.text });
