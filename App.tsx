@@ -159,7 +159,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-[#0a0a0c] transition-colors duration-300">
-      <aside className="bg-white dark:bg-[#111214] border-r border-slate-200 dark:border-slate-800 transition-all duration-300 flex-shrink-0 flex flex-col w-full md:w-80 z-20">
+      <aside className="bg-white dark:bg-[#111214] border-r border-slate-200 dark:border-slate-800 transition-all duration-300 flex-shrink-0 flex flex-col w-full md:w-80 z-20 pt-[env(safe-area-inset-top)]">
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="bg-emerald-600 p-2.5 rounded-2xl text-white shadow-lg shadow-emerald-900/40">
@@ -251,7 +251,8 @@ const App: React.FC = () => {
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-6 md:p-12">
+      {/* Main Content Area with Safe Area Padding */}
+      <main className="flex-1 overflow-y-auto p-6 md:p-12 pb-[calc(100px+env(safe-area-inset-bottom))] pt-[calc(24px+env(safe-area-inset-top))] md:pt-12">
         <Header 
           activeTab={activeTab} 
           isOnline={isOnline} 
