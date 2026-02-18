@@ -94,6 +94,11 @@ export const useAppViewModel = () => {
       const authData = await authRes.json();
       const userProfile = authData.user;
 
+      // Apply Cloud Preferences immediately if they exist
+      if (userProfile.preferences?.theme) {
+          setTheme(userProfile.preferences.theme);
+      }
+
       // 2. Migration Strategy: Check for local tasks from hardware/guest session
       if (authUser && authUser.token === 'hardware_identity') {
           const storageKey = STORAGE_PREFIX + authUser.id;
@@ -138,7 +143,8 @@ export const useAppViewModel = () => {
         name: userProfile.name,
         email: userProfile.email,
         picture: userProfile.picture,
-        token: token
+        token: token,
+        preferences: userProfile.preferences
       });
       
       // 4. Load cloud data (Merged)
@@ -489,8 +495,24 @@ export const useAppViewModel = () => {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
+    setTheme(prev => {
+      const newTheme = prev === 'dark' ? 'light' : 'dark';
+      
+      // Sync to cloud if logged in
+      if (authUser && googleToken && isOnline && authUser.token !== 'hardware_identity') {
+          fetch('/api/user/settings', {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${googleToken}`
+              },
+              body: JSON.stringify({ theme: newTheme })
+          }).catch(err => console.error("Failed to sync theme", err));
+      }
+      
+      return newTheme;
+    });
+  }, [authUser, googleToken, isOnline]);
 
   const progress = useMemo(() => {
     if (tasks.length === 0) return 0;

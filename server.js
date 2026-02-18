@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import mysql from 'mysql2/promise';
 import { GoogleAuth, OAuth2Client } from 'google-auth-library';
+import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 const PORT = parseInt(process.env.PORT) || 8080;
@@ -10,6 +11,9 @@ const PORT = parseInt(process.env.PORT) || 8080;
 // Resolve Client ID from multiple possible sources
 const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "222612925549-3kjshsapngiopj12220s7q6dvct984md.apps.googleusercontent.com";
 const client = new OAuth2Client(CLIENT_ID);
+
+// Initialize Gemini API
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY });
 
 // Middleware for parsing JSON
 app.use(express.json());
@@ -70,13 +74,14 @@ async function initDb() {
   try {
     const connection = await pool.getConnection();
     
-    // Create Users table with extended profile fields
+    // Create Users table with extended profile fields and preferences
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         google_id VARCHAR(255) PRIMARY KEY,
         email VARCHAR(255) NOT NULL,
         name VARCHAR(255),
         picture TEXT,
+        preferences JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -84,6 +89,7 @@ async function initDb() {
     // Schema Migration: Ensure columns exist if table was already created
     try { await connection.query(`ALTER TABLE users ADD COLUMN name VARCHAR(255)`); } catch (e) {}
     try { await connection.query(`ALTER TABLE users ADD COLUMN picture TEXT`); } catch (e) {}
+    try { await connection.query(`ALTER TABLE users ADD COLUMN preferences JSON`); } catch (e) {}
 
     // Create Tasks table
     await connection.query(`
@@ -142,10 +148,23 @@ app.post('/api/auth/login', async (req, res) => {
         console.warn('DB not connected, login proceeding without persistence');
     }
 
-    // 3. Return user profile
+    // 3. Fetch latest user data including preferences
+    let preferences = {};
+    if (pool) {
+      try {
+        const [rows] = await pool.query('SELECT preferences FROM users WHERE google_id = ?', [googleId]);
+        if (rows.length > 0 && rows[0].preferences) {
+            preferences = rows[0].preferences;
+        }
+      } catch (e) {
+        console.warn("Failed to fetch preferences", e);
+      }
+    }
+
+    // 4. Return user profile
     res.json({
         status: 'success',
-        user: { id: googleId, email, name, picture },
+        user: { id: googleId, email, name, picture, preferences },
         message: 'Login successful'
     });
 
@@ -176,6 +195,75 @@ const verifyUser = async (req, res, next) => {
     return res.status(401).json({ status: 'error', message: 'Invalid token' });
   }
 };
+
+// ----------------------------------------------------------------------
+// USER SETTINGS ROUTES
+// ----------------------------------------------------------------------
+
+// GET /api/user/settings
+app.get('/api/user/settings', verifyUser, async (req, res) => {
+  if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
+  
+  try {
+    const [rows] = await pool.query('SELECT preferences FROM users WHERE google_id = ?', [req.user.google_id]);
+    const prefs = rows.length > 0 ? rows[0].preferences || {} : {};
+    res.json({ status: 'success', preferences: prefs });
+  } catch (err) {
+    console.error('Fetch Settings Error:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch settings' });
+  }
+});
+
+// PUT /api/user/settings
+app.put('/api/user/settings', verifyUser, async (req, res) => {
+  if (!pool) return res.status(503).json({ status: 'error', message: 'DB not available' });
+  const newSettings = req.body;
+  
+  try {
+    // Read-Modify-Write to ensure safe merging of JSON fields
+    const [rows] = await pool.query('SELECT preferences FROM users WHERE google_id = ?', [req.user.google_id]);
+    let currentPrefs = rows.length > 0 ? rows[0].preferences || {} : {};
+    
+    // Ensure currentPrefs is an object (in case DB driver returns string)
+    if (typeof currentPrefs === 'string') {
+        try { currentPrefs = JSON.parse(currentPrefs); } catch(e) { currentPrefs = {}; }
+    }
+
+    const updatedPrefs = { ...currentPrefs, ...newSettings };
+    
+    await pool.query('UPDATE users SET preferences = ? WHERE google_id = ?', [JSON.stringify(updatedPrefs), req.user.google_id]);
+    
+    res.json({ status: 'success', preferences: updatedPrefs });
+  } catch (err) {
+    console.error('Update Settings Error:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to update settings' });
+  }
+});
+
+// ----------------------------------------------------------------------
+// AI ROUTES
+// ----------------------------------------------------------------------
+
+app.post('/api/generate-task', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+    });
+    
+    res.json({ result: response.text });
+  } catch (error) {
+    console.error('GenAI Error:', error);
+    res.status(500).json({ error: 'Failed to generate content' });
+  }
+});
+
+// ----------------------------------------------------------------------
+// TASK ROUTES
+// ----------------------------------------------------------------------
 
 // GET /api/tasks
 app.get('/api/tasks', verifyUser, async (req, res) => {

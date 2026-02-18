@@ -1,17 +1,20 @@
-
-import { GoogleGenAI } from "@google/genai";
+import { generateTaskAI } from './api.ts';
 
 /**
  * Generates architectural advice based on the current phase of the user's journey.
  */
 export const getArchitectureAdvice = async (phase: string) => {
-  // Create a new instance right before making an API call to ensure it always uses the most up-to-date API key.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `You are a world-class life architect using the "Behaviordynamics" framework. 
-    Provide strategic guidance for someone in the "${phase}" phase. Return a structured Markdown response.`,
-  });
+  try {
+    // Construct the prompt for the AI
+    const prompt = `You are a world-class life architect using the "Behaviordynamics" framework. 
+    Provide strategic guidance for someone in the "${phase}" phase. Return a structured Markdown response.`;
 
-  return response.text || "Could not generate strategic advice at this time.";
+    // Call the backend proxy instead of the Gemini SDK directly
+    const data = await generateTaskAI(prompt);
+    
+    return data.result || "Could not generate strategic advice at this time.";
+  } catch (error) {
+    console.error("AI Service Error:", error);
+    return "Could not generate strategic advice at this time.";
+  }
 };

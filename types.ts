@@ -25,6 +25,7 @@ export interface AuthUser {
   email: string;
   picture: string;
   token: string;
+  preferences?: Record<string, any>;
 }
 
 export interface Project {
