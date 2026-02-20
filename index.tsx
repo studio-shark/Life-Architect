@@ -21,6 +21,8 @@ try {
 // Use the environment variable if available, otherwise use the hardcoded fallback
 const GOOGLE_CLIENT_ID = envClientId || "222612925549-3kjshsapngiopj12220s7q6dvct984md.apps.googleusercontent.com";
 
+console.log('Initializing Google OAuth with Client ID:', GOOGLE_CLIENT_ID);
+
 const root = ReactDOM.createRoot(rootElement);
 
 if (!GOOGLE_CLIENT_ID) {
