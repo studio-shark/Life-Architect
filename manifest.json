@@ -1,10 +1,10 @@
 {
   "id": "io.lifearchitect.app",
-  "name": "Life Architect",
-  "short_name": "LifeArchitect",
+  "name": "Life-Architect",
+  "short_name": "Life-Architect",
   "lang": "en",
   "dir": "ltr",
-  "description": "Master your daily flow with the world's first physics-based strategic checklist. Life Architect transforms your habits into energy vectors, helping you visualize progress through the laws of motion.",
+  "description": "Master your daily flow with the world's first physics-based strategic checklist. Life-Architect transforms your habits into energy vectors, helping you visualize progress through the laws of motion.",
   "start_url": "./index.html?launcher=true",
   "scope": "./",
   "display": "standalone",
@@ -116,8 +116,8 @@
   "related_applications": [
     {
       "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=io.lifephysics.architect",
-      "id": "io.lifephysics.architect"
+      "url": "https://play.google.com/store/apps/details?id=io.lifearchitect.app",
+      "id": "io.lifearchitect.app"
     }
   ],
   "prefer_related_applications": false

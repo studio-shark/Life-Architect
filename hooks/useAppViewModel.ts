@@ -544,8 +544,8 @@ export const useAppViewModel = () => {
     
     const params = new URLSearchParams({
       text: `Quest: ${title}`,
-      details: `${description}\n\nSynced via Life Architect.`,
-      location: 'Life Architect Dashboard',
+      details: `${description}\n\nSynced via Life-Architect.`,
+      location: 'Life-Architect Dashboard',
     });
 
     if (isAndroid) {
