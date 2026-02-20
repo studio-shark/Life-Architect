@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import LoginButton from './LoginButton.tsx';
+import PrivacyPolicyModal from './PrivacyPolicyModal.tsx';
+import TermsOfServiceModal from './TermsOfServiceModal.tsx';
 
 interface SettingsPanelProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   authUser: any;
   onLogin: (token: string) => void;
+  onLogout: () => void;
   appVersion: string;
 }
 
@@ -14,9 +17,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onToggleTheme, 
   authUser,
   onLogin,
+  onLogout,
   appVersion 
 }) => {
   const isHardware = !authUser || authUser.token === 'hardware_identity';
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -26,7 +32,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Architect Control Panel</p>
       </div>
 
-      {isHardware && (
+      {isHardware ? (
         <div className="bg-slate-100 dark:bg-slate-900/50 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center gap-4">
            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-lg">
              <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -38,6 +44,22 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
            <div className="mt-2">
              <LoginButton onSuccess={onLogin} />
            </div>
+        </div>
+      ) : (
+        <div className="bg-slate-100 dark:bg-slate-900/50 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center gap-4">
+           <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-lg">
+             <img src={authUser.picture} alt={authUser.name} className="w-full h-full rounded-full object-cover" />
+           </div>
+           <div>
+             <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase">Logged In</h3>
+             <p className="text-xs text-slate-500 font-bold mt-1">Connected as {authUser.name}</p>
+           </div>
+           <button 
+             onClick={onLogout}
+             className="px-6 py-2 bg-white dark:bg-slate-800 text-red-500 font-bold rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-xs uppercase tracking-wider"
+           >
+             Sign Out
+           </button>
         </div>
       )}
 
@@ -68,6 +90,52 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
 
       <div className="bg-white dark:bg-[#111214] rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl transition-colors duration-300">
+        <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Legal & Compliance</h3>
+        
+        <div className="space-y-4">
+          <button 
+            onClick={() => setIsPrivacyOpen(true)}
+            className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors group"
+          >
+             <div className="flex items-center gap-3">
+               <div className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 group-hover:text-emerald-500 transition-colors">
+                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                 </svg>
+               </div>
+               <div className="text-left">
+                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Privacy Policy</h4>
+                 <p className="text-xs text-slate-500 font-medium">Data collection and usage</p>
+               </div>
+             </div>
+             <svg className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+             </svg>
+          </button>
+
+          <button 
+            onClick={() => setIsTermsOpen(true)}
+            className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors group"
+          >
+             <div className="flex items-center gap-3">
+               <div className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 group-hover:text-emerald-500 transition-colors">
+                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                 </svg>
+               </div>
+               <div className="text-left">
+                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Terms of Service</h4>
+                 <p className="text-xs text-slate-500 font-medium">Usage agreement and rules</p>
+               </div>
+             </div>
+             <svg className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+             </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-[#111214] rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-xl transition-colors duration-300">
         <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Device Information</h3>
         
         <div className="space-y-6">
@@ -88,6 +156,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
         </div>
       </div>
+
+      <PrivacyPolicyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+      <TermsOfServiceModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
 
     </div>
   );

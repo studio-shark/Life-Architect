@@ -137,7 +137,7 @@ const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ tasks, state }) => {
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#64748b', fontWeight: 800, textTransform: 'uppercase' }} 
+                  tick={{ fontSize: 9, fill: '#64748b', fontWeight: 800 }} 
                   dy={10}
                 />
                 <YAxis 

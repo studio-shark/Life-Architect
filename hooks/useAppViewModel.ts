@@ -149,6 +149,9 @@ export const useAppViewModel = () => {
         preferences: userProfile.preferences
       });
       
+      // Persist session
+      localStorage.setItem(`${STORAGE_PREFIX}auth_token`, token);
+      
       // 4. Load cloud data (Merged)
       const res = await fetch(`${API_BASE_URL}/api/tasks`, {
         headers: {
@@ -170,14 +173,75 @@ export const useAppViewModel = () => {
     } catch (e) {
       console.error("Login processing error", e);
       setSyncStatus('error');
+      // If login failed, ensure we don't keep a bad token
+      localStorage.removeItem(`${STORAGE_PREFIX}auth_token`);
     }
   }, [authUser]);
 
-  // Initial Hardware/Guest Setup
+  // Logout Function
+  const logout = useCallback(async () => {
+    setAuthUser(null);
+    setGoogleToken(null);
+    setTasks([]);
+    localStorage.removeItem(`${STORAGE_PREFIX}auth_token`);
+    
+    // Re-initialize hardware identity
+    setIsLoading(true);
+    try {
+        const idResult = await Device.getId();
+        const info = await Device.getInfo();
+        const deviceId = idResult.identifier;
+        
+        const hardwareUser: AuthUser = {
+          id: deviceId,
+          name: `Architect-${deviceId.slice(0, 4)}`,
+          email: `${deviceId.slice(0, 8)}@${info.model}.internal`,
+          picture: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${deviceId}`,
+          token: 'hardware_identity'
+        };
+        setAuthUser(hardwareUser);
+
+        const storageKey = STORAGE_PREFIX + deviceId;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            setTasks(parsed.tasks || INITIAL_TASKS);
+            setProjects(parsed.projects || INITIAL_PROJECTS);
+            setUsers(parsed.users || INITIAL_USERS);
+            setXp(parsed.xp || 0);
+            setCoins(parsed.coins || 0);
+            setLevel(parsed.level || 1);
+            setOwnedAvatarIds(parsed.ownedAvatarIds || ['default']);
+            setSelectedAvatarId(parsed.selectedAvatarId || 'default');
+        } else {
+            setTasks(INITIAL_TASKS);
+            setProjects(INITIAL_PROJECTS);
+            setUsers(INITIAL_USERS);
+        }
+    } catch (err) {
+      console.error("Hardware ID failed during logout", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial Hardware/Guest Setup & Session Restoration
   useEffect(() => {
     const initDeviceAuth = async () => {
       setIsLoading(true);
       try {
+        // Check for persisted session first
+        const savedToken = localStorage.getItem(`${STORAGE_PREFIX}auth_token`);
+        if (savedToken) {
+            console.log("Restoring session...");
+            // We can reuse handleGoogleLogin to verify and load data
+            // But we need to be careful about the 'authUser' dependency in handleGoogleLogin
+            // For now, let's just call it. Since authUser is null initially, migration logic won't run, which is correct for restore.
+            await handleGoogleLogin(savedToken);
+            setIsLoading(false);
+            return;
+        }
+
         if (!authUser) {
             const idResult = await Device.getId();
             const info = await Device.getInfo();
@@ -228,7 +292,7 @@ export const useAppViewModel = () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
     };
-  }, []);
+  }, []); // Empty dependency array to run once on mount
 
   // Sync to API Helper
   const syncTaskToCloud = async (task: Task, method: 'POST' | 'PUT') => {
@@ -558,7 +622,8 @@ export const useAppViewModel = () => {
       buyAvatar,
       selectAvatar,
       toggleTheme,
-      handleGoogleLogin
+      handleGoogleLogin,
+      logout
     }
   };
 };

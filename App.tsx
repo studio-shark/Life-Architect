@@ -184,7 +184,7 @@ const App: React.FC = () => {
           <div 
             ref={dropdownRef}
             onClick={() => setIsNavDropdownOpen(!isNavDropdownOpen)}
-            className="bg-slate-50 dark:bg-[#111214] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 relative overflow-visible group cursor-pointer hover:border-emerald-500/50 transition-all duration-300 active:scale-[0.98]"
+            className="bg-slate-50 dark:bg-[#111214] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 relative overflow-visible group cursor-pointer md:cursor-default hover:border-emerald-500/50 md:hover:border-slate-200 md:dark:hover:border-slate-800 transition-all duration-300 active:scale-[0.98] md:active:scale-100"
           >
             <div className="absolute top-6 right-6 flex items-center gap-1.5 bg-slate-200 dark:bg-black/40 border border-amber-500/20 px-3 py-1.5 rounded-full shadow-lg">
                <span className="text-amber-600 dark:text-amber-500 font-black text-[10px] tracking-widest">{coins}</span>
@@ -192,7 +192,7 @@ const App: React.FC = () => {
             </div>
 
             {isNavDropdownOpen && (
-              <div className="absolute left-0 right-0 top-full mt-3 bg-white dark:bg-[#1a1a1e] border border-slate-200 dark:border-slate-700/50 rounded-[1.5rem] shadow-2xl shadow-slate-300 dark:shadow-black overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 z-[100]">
+              <div className="absolute left-0 right-0 top-full mt-3 bg-white dark:bg-[#1a1a1e] border border-slate-200 dark:border-slate-700/50 rounded-[1.5rem] shadow-2xl shadow-slate-300 dark:shadow-black overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 z-[100] md:hidden">
                 <div className="p-2 space-y-1">
                   {navItems.map((item) => (
                     <button
@@ -218,7 +218,7 @@ const App: React.FC = () => {
                 <div className="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-400 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-emerald-900/50 border border-white/10 overflow-hidden">
                    <img src={getAvatarUrl()} className="w-full h-full object-cover p-1" alt="Equipped Shell" />
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-full flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-full flex items-center justify-center md:hidden">
                   <svg className={`w-3.5 h-3.5 text-emerald-500 transition-transform duration-300 ${isNavDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -406,6 +406,7 @@ const App: React.FC = () => {
               onToggleTheme={actions.toggleTheme}
               authUser={authUser}
               onLogin={actions.handleGoogleLogin}
+              onLogout={actions.logout}
               appVersion="v1.1.0"
             />
           )}
