@@ -23,6 +23,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -87,8 +88,11 @@ const verifyUser = async (req, res, next) => {
     req.user = { google_id: payload.sub, email: payload.email };
     next();
   } catch (error) {
-    console.error('Auth Verification Error:', error);
-    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+    console.error('Auth Verification Error:', error.message);
+    if (error.message.includes('audience')) {
+      console.error(`Expected Audience: ${CLIENT_ID}`);
+    }
+    return res.status(401).json({ status: 'error', message: 'Invalid token', details: error.message });
   }
 };
 
@@ -197,8 +201,11 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Auth Verification Failed:', error);
-    res.status(401).json({ error: 'Invalid Google Token' });
+    console.error('Login Verification Failed:', error.message);
+    if (error.message.includes('audience')) {
+      console.error(`Expected Audience: ${CLIENT_ID}`);
+    }
+    res.status(401).json({ error: 'Invalid Google Token', details: error.message });
   }
 });
 
