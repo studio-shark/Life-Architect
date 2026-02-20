@@ -46,6 +46,24 @@ Life-Architect transforms your daily habits into energy vectors, helping you vis
    npm run build
    ```
 
+## Deployment to Cloud Run (us-central1)
+
+1. **Build and Deploy**
+
+   ```bash
+   gcloud run deploy life-architect \
+     --source . \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --set-env-vars INSTANCE_CONNECTION_NAME="gen-lang-client-0607890668:us-central1:life" \
+     --set-env-vars DB_USER="root" \
+     --set-env-vars DB_NAME="life_architect" \
+     --set-env-vars NODE_ENV="production"
+   ```
+
+   *Note: You will need to add `DB_PASSWORD`, `VITE_GOOGLE_CLIENT_ID`, and `API_KEY` via the Cloud Console or `--set-secrets` for security.*
+
 ## License
 
 Private / Proprietary
