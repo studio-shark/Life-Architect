@@ -20,14 +20,46 @@ app.use(express.json());
 
 // CORS Middleware to allow Authorization headers and cross-origin requests
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
+});
+
+// ... (existing code) ...
+
+// Debug DB Route - detailed connection info
+app.get('/debug/db', async (req, res) => {
+  try {
+    const connection = await db.getConnection();
+    const [rows] = await connection.query('SELECT 1 as val');
+    connection.release();
+    res.json({ 
+      status: 'success', 
+      message: 'Database connected successfully', 
+      value: rows[0].val,
+      config: {
+        socketPath: process.env.INSTANCE_CONNECTION_NAME ? `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}` : 'N/A',
+        user: process.env.DB_USER ? 'Set' : 'Missing',
+        db: process.env.DB_NAME
+      }
+    });
+  } catch (err) {
+    console.error('Debug DB Error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      code: err.code, 
+      errno: err.errno, 
+      syscall: err.syscall, 
+      address: err.address,
+      fatal: err.fatal,
+      message: err.message 
+    });
+  }
 });
 
 // Resolve __dirname for ES modules

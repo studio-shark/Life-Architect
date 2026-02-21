@@ -35,6 +35,10 @@ db.getConnection()
   })
   .catch(err => {
     console.error('Failed to initialize database pool:', err);
+    console.error('Error Code:', err.code);
+    console.error('Error Number:', err.errno);
+    console.error('Syscall:', err.syscall);
+    console.error('Address:', err.address);
   });
 
 export default db;
