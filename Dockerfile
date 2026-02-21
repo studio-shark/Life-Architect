@@ -12,8 +12,9 @@ RUN npm install
 COPY . .
 
 # Accept Build Args for Vite (Required for Google Auth)
+# These must match the keys in your Cloud Build Trigger "Substitution variables"
 ARG VITE_GOOGLE_CLIENT_ID
-ENV VITE_GOOGLE_CLIENT_ID=\$VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 # Build the React app
 RUN npm run build
@@ -24,7 +25,7 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
-# Install ONLY production dependencies (server.js, express, google-auth-library)
+# Install ONLY production dependencies
 COPY package*.json ./
 RUN npm install --omit=dev
 
