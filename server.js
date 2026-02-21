@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { OAuth2Client } from 'google-auth-library';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import session from 'express-session';
+import MySQLStore from 'express-mysql-session';
 import db from './db.js';
 
 const app = express();
@@ -15,8 +17,30 @@ const client = new OAuth2Client(CLIENT_ID);
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.API_KEY);
 
+// Trust Proxy for Google Load Balancer
+app.set('trust proxy', 1);
+
 // Middleware for parsing JSON
 app.use(express.json());
+
+// Session Store Configuration
+const MySQLSessionStore = MySQLStore(session);
+const sessionStore = new MySQLSessionStore({}, db); // Use existing db pool
+
+// Session Middleware
+app.use(session({
+  key: 'session_cookie_name',
+  secret: process.env.SESSION_SECRET || 'default_secret_key_change_in_production',
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    secure: true, // Required for Cloud Run (HTTPS)
+    httpOnly: true,
+    sameSite: 'lax' // Allows navigation from external sites (like Google Auth redirect)
+  }
+}));
 
 // CORS Middleware to allow Authorization headers and cross-origin requests
 app.use((req, res, next) => {
@@ -71,6 +95,13 @@ const __dirname = path.dirname(__filename);
 // ----------------------------------------------------------------------
 
 const verifyUser = async (req, res, next) => {
+  // 1. Check for active session (Persistent Login)
+  if (req.session && req.session.user) {
+    req.user = req.session.user;
+    return next();
+  }
+
+  // 2. Fallback to Bearer Token (Stateless / API calls)
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ status: 'error', message: 'No token provided' });
@@ -199,12 +230,20 @@ app.post('/api/auth/login', async (req, res) => {
       console.warn("Failed to fetch preferences", e);
     }
 
-    // 4. Return user profile
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-    res.json({
-        status: 'success',
-        user: { id: googleId, email, name, picture, preferences },
-        message: 'Login successful'
+    // 4. Return user profile & Set Session
+    const userData = { id: googleId, email, name, picture, preferences };
+    req.session.user = { google_id: googleId, email, name, picture }; // Store minimal info in session
+    
+    // Explicitly save session before response to ensure cookie is set
+    req.session.save((err) => {
+      if (err) console.error('Session Save Error:', err);
+      
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+      res.json({
+          status: 'success',
+          user: userData,
+          message: 'Login successful'
+      });
     });
 
   } catch (error) {
