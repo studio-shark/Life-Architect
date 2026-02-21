@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
     "@capacitor/core": "^6.0.0",

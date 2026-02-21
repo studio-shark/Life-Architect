@@ -162,9 +162,11 @@ const App: React.FC = () => {
       <aside className="bg-white dark:bg-[#111214] border-r border-slate-200 dark:border-slate-800 transition-all duration-300 flex-shrink-0 flex flex-col w-full md:w-80 z-20 pt-[env(safe-area-inset-top)]">
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-emerald-600 p-2.5 rounded-2xl text-white shadow-lg shadow-emerald-900/40">
-              <ICONS.Rocket />
-            </div>
+            <img 
+              src="https://i.ibb.co/Kj9KCv58/life-architect-logo-v2-transparent-fixed.png" 
+              alt="Life Architect Logo" 
+              className="w-12 h-12 object-contain drop-shadow-md"
+            />
             <h1 className="font-black text-xl tracking-tighter uppercase text-slate-900 dark:text-white">Life-Architect</h1>
           </div>
 

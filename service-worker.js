@@ -34,6 +34,17 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Optimized for reliability (Cache-First for Navigation fallback)
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // CRITICAL: Network Only for Google Auth & API calls to prevent "Failed to fetch"
+  // This bypasses the cache entirely for auth flows and API endpoints
+  if (url.hostname.includes('accounts.google.com') || 
+      url.hostname.includes('googleapis.com') ||
+      url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (event.request.method !== 'GET') return;
 
   // Faster navigation fallback to pass PWABuilder offline checks
@@ -48,6 +59,7 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
+      // Network-first strategy for other requests
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         // Cache opaque and normal responses
         if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
